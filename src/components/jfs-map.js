@@ -4,7 +4,7 @@
 // polyline runs, arrow playhead markers, event markers, focus/dim) is new for this toolkit -
 // see PLAN.md Step 4.
 
-import { altColor, desaturate, buildColoredRuns, decimateStride, interpolatePosition, isValidLatLon, firstValidPositionIndex } from '../geo.js';
+import { altColor, desaturate, buildColoredRuns, decimateStride, interpolatePosition, isValidLatLon, firstValidPositionIndex, buildPositionSeries } from '../geo.js';
 
 let _leafletPromise = null;
 function loadLeaflet() {
@@ -174,6 +174,22 @@ class JfsMap extends HTMLElement {
     const next = LAYER_ORDER[(LAYER_ORDER.indexOf(theme) + 1) % LAYER_ORDER.length];
     this._layerBtn.title = `Map layer: ${LAYER_LABELS[theme] || theme} (click, or press L, for ${LAYER_LABELS[next]})`;
     if (this._store) this._store.mapTileTheme = theme;
+    this._updateGroundRunColors(theme);
+  }
+
+  // On-ground path color is theme-dependent (see geo.js#GROUND_COLOR_BY_THEME) for contrast against
+  // each basemap, but polyline runs are built once and cached (PLAN.md Step 4 - rebuilding on every
+  // render would be expensive for long tracks) - so switching themes needs to restyle the
+  // already-built ground-colored runs in place rather than waiting for the next full rebuild (which,
+  // for a track whose frame count never changes after import, would otherwise be "never").
+  _updateGroundRunColors(theme) {
+    const groundColor = altColor(0, true, theme);
+    for (const entry of this._trackLayers.values()) {
+      for (const layer of entry.runLayers) {
+        if (layer._colorKey === 'ground') layer._origColor = groundColor;
+      }
+    }
+    this._applyFocus(); // re-applies opacity/desaturation using the updated _origColor values
   }
 
   _colorKeyFor(altFt, onGround) {
@@ -208,12 +224,13 @@ class JfsMap extends HTMLElement {
           // armed for recording before the simulator delivered a first position) - including it
           // would drag the polyline/bounds out to "Null Island" ("crap on showing" - reported bug).
           .filter((i) => isValidLatLon(track.frames.lat[i], track.frames.lon[i]));
+        const mapTheme = this.getAttribute('theme') || 'dark';
         const points = idx.map((i) => {
           const altFt = track.frames.alt[i] * 3.28084;
           const onGround = !!(track.frames.groundFlags[i] & 1);
           return {
             lat: track.frames.lat[i], lon: track.frames.lon[i],
-            color: altColor(altFt, onGround), colorKey: this._colorKeyFor(altFt, onGround),
+            color: altColor(altFt, onGround, mapTheme), colorKey: this._colorKeyFor(altFt, onGround),
           };
         });
         const runs = buildColoredRuns(points);
@@ -221,12 +238,17 @@ class JfsMap extends HTMLElement {
           const pl = L.polyline(run.latlngs, { color: run.color, weight: 3, opacity: 0.9, lineJoin: 'round' });
           pl._origColor = run.color; // Leaflet's setStyle() mutates options.color in place, so the
           // original (non-desaturated) color has to be kept separately for _applyFocus() to restore.
+          pl._colorKey = run.colorKey; // used by _updateGroundRunColors() to find the ground-colored runs when the map theme changes
           pl.on('click', (e) => { L.DomEvent.stopPropagation(e); this._store.selectTrack(track.id); });
           pl.addTo(entry.group);
           entry.runLayers.push(pl);
         }
         entry.frameCount = track.frames.times.length;
         entry.bounds = idx.length ? L.latLngBounds(idx.map((i) => [track.frames.lat[i], track.frames.lon[i]])) : null;
+        // Position-only series for interpolatePosition() to search over - see buildPositionSeries()
+        // for why searching the raw frames directly (which include non-position frame types sharing
+        // the same columns) is unsafe.
+        entry.posSeries = buildPositionSeries(track.frames);
       }
 
       if (!entry.icon) {
@@ -246,12 +268,12 @@ class JfsMap extends HTMLElement {
       // unlike the playhead arrow these only need building once, not on every time-changed tick -
       // rebuilding ~1000s of circleMarkers up to 60x/s during playback would be a real perf problem.
       if (!entry.eventMarkers) {
-        entry.eventMarkers = (track.events || []).map((evt) => {
-          const pos = interpolatePosition(track.frames, evt.timeS);
+        entry.eventMarkers = entry.posSeries ? (track.events || []).map((evt) => {
+          const pos = interpolatePosition(entry.posSeries, evt.timeS);
           const marker = L.circleMarker([pos.lat, pos.lon], { radius: 4, color: '#fff', weight: 1, fillColor: '#111827', fillOpacity: 0.9 });
           marker.bindTooltip(`<span class="jfs-event-tooltip">${evt.label}</span>`);
           return marker;
-        });
+        }) : [];
       }
       this._syncEventMarkers(track, entry);
     }
@@ -315,17 +337,17 @@ class JfsMap extends HTMLElement {
     const t = this._store.currentTimeS;
     for (const track of this._store.project.tracks) {
       const entry = this._trackLayers.get(track.id);
-      if (!entry || !entry.icon || !track.visible) continue;
+      if (!entry || !entry.icon || !track.visible || !entry.posSeries) continue;
       if (track.frames.times.length === 0) continue;
       const localT = t - track.timeOffsetS;
-      const pos = interpolatePosition(track.frames, localT);
+      const pos = interpolatePosition(entry.posSeries, localT);
       // Skip repositioning on a degenerate (0,0) frame - see the Null Island note in _renderTracks -
       // rather than jumping the marker out to the middle of the ocean; it just holds its last
       // known-good position until the interpolated frame is valid again.
       if (isValidLatLon(pos.lat, pos.lon)) {
         entry.icon.setLatLng([pos.lat, pos.lon]);
         const altFt = pos.alt * 3.28084;
-        this._updateArrowIcon(entry, altColor(altFt, pos.onGround), pos.heading);
+        this._updateArrowIcon(entry, altColor(altFt, pos.onGround, this.getAttribute('theme') || 'dark'), pos.heading);
       }
       // Event markers are static (built once in _renderTracks) - no per-tick work needed here.
     }

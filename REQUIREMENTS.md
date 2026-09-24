@@ -6,7 +6,7 @@
 - The project's unit of editing is the individual **aircraft track** — not the source file — since that's what the `.jfs` format itself treats as independent (own frames, own relative timestamps, all sharing one global recording clock).
 - Saving a project produces exactly **one** merged `.jfs` file containing every aircraft track still in the project, loadable back into JoinFS.
 - Re-opening that exported `.jfs` file is the resume-editing workflow — no separate editable-project file format or autosave is needed.
-- On save (`Ctrl+S`), the user chooses the target build-variant tail layout: **FS2024** (3-string tail, livery preserved when present, default — the most commonly used build) or **other builds** (FSX/P3D/MSFS2020/X-Plane; 2-string tail, no livery field at all) — see recording-protocol.md §7.1.
+- On save (`Ctrl+S`), the user chooses the target build-variant tail layout: **FS2024** (3-string tail, livery preserved when present, default — the most commonly used build) or **other builds** (FSX/P3D/MSFS2020/X-Plane; 2-string tail, no livery field at all) — see recording-protocol.md §7.1. This choice is persisted in `localStorage` (same pattern as the app theme) so it survives a reload instead of always resetting to the FS2024 default.
 
 ## UI
 - Auto-themeable, respecting the OS color theme (preferred default).

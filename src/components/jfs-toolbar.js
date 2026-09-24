@@ -6,6 +6,16 @@ import { tracksFromJfsBuffer, exportProject } from '../project-model.js';
 import { openGpxImportModal } from './jfs-gpx-modal.js';
 import { t } from '../i18n.js';
 
+// Persists the save-time build-variant choice (matches theme.js's localStorage pattern) so it
+// survives a reload instead of always resetting to the fs2024 default.
+const BUILD_VARIANT_KEY = 'jfs-toolkit:buildVariant';
+function getStoredBuildVariant() {
+  try { return localStorage.getItem(BUILD_VARIANT_KEY) || 'fs2024'; } catch { return 'fs2024'; }
+}
+function setStoredBuildVariant(v) {
+  try { localStorage.setItem(BUILD_VARIANT_KEY, v); } catch { /* ignore (private browsing etc.) */ }
+}
+
 const STYLE = `
   :host { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--toolbar-bg, #0d0f14); color: var(--fg, #e2e8f0); font: 13px system-ui, sans-serif; border-bottom: 1px solid var(--border, #262b36); flex-wrap: wrap; }
   button { background: var(--btn-bg, #1e2433); color: inherit; border: 1px solid var(--border, #262b36); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
@@ -43,12 +53,16 @@ export class JfsToolbar extends HTMLElement {
     `;
     this._store = null;
     this._warningsEl = this._root.getElementById('warnings');
+    this._root.getElementById('buildVariant').value = getStoredBuildVariant();
 
     this._root.getElementById('importBtn').addEventListener('click', () => this._doImport());
     this._root.getElementById('saveBtn').addEventListener('click', () => this._doSave());
     this._root.getElementById('clearSelectionBtn').addEventListener('click', () => this._store && this._store.clearSelection());
     this._root.getElementById('appTheme').addEventListener('change', (e) => {
       this.dispatchEvent(new CustomEvent('app-theme-changed', { detail: { theme: e.target.value } }));
+    });
+    this._root.getElementById('buildVariant').addEventListener('change', (e) => {
+      setStoredBuildVariant(e.target.value);
     });
   }
 

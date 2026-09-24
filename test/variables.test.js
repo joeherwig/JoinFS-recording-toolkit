@@ -20,6 +20,8 @@ test('decodeKnownVariable: gear/flaps/light bit mirrors format as expected, unkn
   assert.deepEqual(decodeKnownVariable(VU.gear, 1), { variable: 'gear', label: 'Gear: Down' });
   assert.deepEqual(decodeKnownVariable(VU.gear, 0), { variable: 'gear', label: 'Gear: Up' });
   assert.deepEqual(decodeKnownVariable(VU.flaps, 0.5), { variable: 'flaps', label: 'Flaps: 50%' });
+  assert.deepEqual(decodeKnownVariable(VU.flaps, 0), { variable: 'flaps', label: 'Flaps: Up' });
+  assert.deepEqual(decodeKnownVariable(VU.flaps, 1), { variable: 'flaps', label: 'Flaps: Full' });
   assert.equal(decodeKnownVariable(VU.landing, 1).label, 'Landing light: ON');
   assert.equal(decodeKnownVariable(VU.landing, 0).label, 'Landing light: OFF');
   assert.equal(decodeKnownVariable(123456789, 1), null);

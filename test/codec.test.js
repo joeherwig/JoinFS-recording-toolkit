@@ -97,3 +97,40 @@ test('SimEvent/IntegerVariables/FloatVariables frames round-trip byte-for-byte v
   assert.equal(out.events.length, 1);
   assert.equal(out.events[0].label, 'Gear: Down');
 });
+
+test('events are only recorded on a value change, not on every repeated frame (dedup)', () => {
+  // Reported bug: "the event shows continuous elements" - the recorder writes a variable's current
+  // value periodically even when it hasn't changed, so without dedup a single gear-down produces one
+  // event per frame it's repeated in (real files: thousands). Build 4 IntegerVariables frames -
+  // gear=1, gear=1 (repeat), gear=0 (change), gear=0 (repeat) - and expect exactly 2 events.
+  const GEAR_ID = 2991743992;
+  const track = buildSyntheticTrack({ frameCount: 1 });
+  const makeGearFrame = (down) => {
+    const buf = new Uint8Array(2 + 8);
+    const dv = new DataView(buf.buffer);
+    dv.setUint16(0, 1, true);
+    dv.setUint32(2, GEAR_ID, true);
+    dv.setInt32(6, down ? 1 : 0, true);
+    return buf;
+  };
+  const extraPayloads = [makeGearFrame(true), makeGearFrame(true), makeGearFrame(false), makeGearFrame(false)];
+  const extraTimes = [0.1, 0.2, 0.3, 0.4];
+
+  track.frames.times = new Float64Array([...track.frames.times, ...extraTimes]);
+  track.frames.types = new Uint8Array([...track.frames.types, ...extraTimes.map(() => 11)]);
+  track.frames.opaquePayload = [...track.frames.opaquePayload, ...extraPayloads];
+  for (const key of ['lat', 'lon', 'alt', 'pitch', 'bank', 'heading', 'vX', 'vY', 'vZ', 'elevation', 'staticCgToGround', 'groundFlags']) {
+    const arr = track.frames[key];
+    const Ctor = arr.constructor;
+    track.frames[key] = new Ctor([...arr, ...extraTimes.map(() => 0)]);
+  }
+
+  const bytes = encodeJfsFile([track], { buildVariant: 'other' });
+  const { tracks } = decodeJfsFile(bytes.buffer);
+  const events = tracks[0].events;
+  assert.equal(events.length, 2, `expected exactly 2 transitions, got ${JSON.stringify(events)}`);
+  assert.equal(events[0].label, 'Gear: Down');
+  assert.equal(events[0].timeS, 0.1);
+  assert.equal(events[1].label, 'Gear: Up');
+  assert.equal(events[1].timeS, 0.3);
+});
