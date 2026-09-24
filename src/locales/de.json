@@ -1,0 +1,21 @@
+{
+  "app.title": "JoinFS JFS Toolkit",
+  "toolbar.import": "Importieren",
+  "toolbar.importHint": ".jfs- oder .gpx-Dateien hinzufügen",
+  "toolbar.save": "Speichern",
+  "toolbar.buildVariant.fs2024": "FS2024 (mit Lackierung)",
+  "toolbar.buildVariant.other": "Andere Builds (FSX/P3D/MSFS2020/X-Plane)",
+  "toolbar.appTheme.auto": "Automatisch",
+  "toolbar.appTheme.light": "Hell",
+  "toolbar.appTheme.dark": "Dunkel",
+  "toolbar.clearSelection": "Auswahl aufheben",
+  "toolbar.noTracks": "Noch keine Tracks geladen — .jfs- oder .gpx-Datei hierher ziehen oder Importieren verwenden.",
+  "toolbar.dropHint": ".jfs- oder .gpx-Dateien zum Hinzufügen hier ablegen",
+  "warnings.dismiss": "Schließen",
+  "timeline.remove": "Track entfernen",
+  "timeline.removeConfirm": "Diesen Track entfernen?",
+  "timeline.altitude": "Höhe",
+  "timeline.speed": "Geschwindigkeit",
+  "timeline.play": "Abspielen",
+  "timeline.pause": "Pause"
+}

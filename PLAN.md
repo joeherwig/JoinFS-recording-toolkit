@@ -1,0 +1,109 @@
+# joinfs-jfs-toolkit — Implementation Plan
+
+## Context
+
+JoinFS (a flight-simulator multiplayer/networking tool) can record a flying session to a `.jfs` binary file and play it back later. The user wants a browser-based toolkit to **visualize** multiple `.jfs` recordings on a map + timeline, and **edit** them (shift an aircraft's appearance in time, remove an aircraft), then **export one merged `.jfs`** file loadable back into JoinFS. The repo `joinfs-jfs-toolkit` currently exists but is empty (no commits).
+
+This plan was produced after:
+- Reading the authoritative `.jfs` format spec (`JoinFS/docs/recording-protocol.md`) and confirming, directly in `JoinFS/Recorder.cs` (lines 985–1020 write-side, 1560–1585 playback-side), that every recorded object's frames share **one global recording clock** — this validates that "shift a track's frame timestamps by a constant offset" is the correct primitive for the timeline drag-to-move edit.
+- Studying two sibling repos whose conventions this toolkit must match: `joinfs-gpx-to-jfs-webcomponent` (already has a tested, working `.jfs` **writer** in JS+Python) and `joinfs-map-websocket-webcomponent` (Leaflet-based map with dark/light tile-layer switching).
+- User-confirmed decisions (via clarifying questions): vanilla JS only (no TypeScript/bundler, matching sibling repos), File System Access API as primary file I/O (Chromium-first, with fallback), no separate editable-project-file format (re-opening the exported `.jfs` IS the resume-editing workflow), newly-added tracks default to project `t=0`.
+- **User additions during planning** (folded into the design below): the writer must support both known build-variant tail layouts (recording-protocol.md §7.1) and let the user pick which one to target **at save time**, rather than always writing one fixed form (§ Step 6); a UI section (theming, i18n, accessibility, SVG-only iconography — § new Step 1b); richer map/timeline visualization reusing `joinfs-map-websocket-webcomponent`'s altitude-color ramp, on-ground grey, and aircraft-icon pipeline, plus gear/flaps/light event markers decoded from the `.jfs` variable frames (§ Steps 4–6); a "focus one track" selection mode synchronized between map and timeline (§ Steps 4–5, this plan's proposed answer to the user's open question about it); drag-and-drop / `[+]` import of both `.jfs` and `.gpx` files, `Ctrl+S` to save (§ Step 6b, Steps 1/4/5).
+
+## Step 0 — Repo bootstrap
+
+- `REQUIREMENTS.md` at repo root is the source of truth for functional/UI requirements — this plan doesn't duplicate it; see that file for Project/UI/Visualizing/Editing/Technical-decisions/`.jfs`-format-reference/Repo-conventions. (Status: done.)
+- `.gitignore` including `.claude/` (and standard `node_modules/`, `.DS_Store`, etc.) so local Claude Code settings/plan files never get committed. (Status: done.)
+- `package.json` (name `joinfs-jfs-toolkit`, no runtime deps), `README.md`, `.github/workflows/test.yml`. (Status: done.)
+
+## Step 1 — File/module layout
+
+```
+joinfs-jfs-toolkit/
+  index.html                      # app shell: <jfs-toolbar>, <jfs-map>, <jfs-timeline>, imports src/app.js as module
+  src/
+    app.js                        # wires store + components + toolbar; owns the rAF playback loop; page-level dragover/drop handlers routing dropped files into the same import path as the toolbar's [+] control; global Ctrl+S handler → save
+    store.js                      # Store class (extends EventTarget): project state, currentTimeS, playing, selection
+    project-model.js              # Track/Project shape, addTracksFromFile, setTrackOffset, removeTrack, exportProject (rebase+merge)
+    jfs-codec.js                  # decodeJfsFile(buffer)/encodeJfsFile(tracks,opts) + all frame (de)serializers; ported writer core
+    jfs-codec-worker.js           # Blob-worker wrapper around jfs-codec.js's pure core (mirrors gpx-to-jfs's makeCore()/workerSource() pattern)
+    file-io.js                    # File System Access API wrappers + <input type=file>/Blob-download fallback, feature detection
+    geo.js                        # haversine, horizontalSpeed(vX,vZ), findFrameIndexAtTime (binary search), buildLodPyramid, computeTrackStats, buildColoredRuns, altColor
+    colors.js                     # stable per-track color assignment (hash(trackId) -> categorical palette index)
+    variables.js                  # ported hashString + VU id table (gear/flaps/lights); decodeKnownVariable(id, value)
+    theme.js                      # app-chrome theme: 'auto'|'light'|'dark', prefers-color-scheme listener, CSS custom-property toggling, persists choice in localStorage
+    i18n.js                       # lazy-fetch + lookup for src/locales/*.json, ported pattern from joinfs-gpx-to-jfs-webcomponent
+    vendor/
+      joinfs-gpx-to-jfs.js         # joinfs-gpx-to-jfs-webcomponent's real converter, vendored verbatim (not ported/reimplemented) - see Step 6b
+    locales/
+      en.json
+      de.json
+    components/
+      jfs-map.js                  # <jfs-map>: Leaflet, 3-theme TILES, altitude-colored/grey-on-ground polylines, arrow playhead markers, event markers, focus/dim
+      jfs-timeline.js             # <jfs-timeline>: canvas rows, altitude/speed overlay lanes, drag/remove/select, scrubber, transport, event markers, focus/dim
+      jfs-gpx-modal.js             # openGpxImportModal(file): loads vendor/joinfs-gpx-to-jfs.js once, embeds <joinfs-gpx-to-jfs> in a <dialog>, resolves with the 'converted' event's Blob or null if cancelled
+      jfs-toolbar.js               # <jfs-toolbar>: [+]/Import control (.jfs and .gpx, Ctrl+O), save (Ctrl+S, + build-variant picker), app theme switch, clear-selection, warnings banner (map's own layer button handles tile theme; locale is `?lang=` URL param only, no in-UI switch - it had no effect as a dropdown, see PLAN.md note)
+  test/
+    codec.test.js                 # round-trip encode/decode, idempotency-modulo-normalization assertions
+    reader-gaps.test.js           # String8Variables, SimEvent, ObjectPosition-in-Aircraft, tail-layout heuristic
+    project-model.test.js         # offset/remove/export-time-rebase logic
+    variables.test.js             # hashString/VU table matches gpx-to-jfs's ids; decodeKnownVariable for gear/flaps/light bit mirrors
+    geo.test.js                   # buildLodPyramid, buildColoredRuns (altColor bucketing + on-ground grey), findFrameIndexAtTime
+    helpers/
+      jfs-samples.js              # synthetic multi-aircraft buffer builder (buildSyntheticJfs(...))
+  docs/
+    format-notes.md                # links recording-protocol.md; documents Obj-out-of-scope + tail-write-policy decisions
+  REQUIREMENTS.md
+  package.json
+  .gitignore                       # includes .claude/
+  .github/workflows/test.yml
+  README.md
+```
+
+## Step 1b — App theming, i18n, iconography
+
+App-chrome theme (`theme.js`: `auto`/`light`/`dark`, CSS custom properties, `localStorage`-persisted) is independent of `<jfs-map>`'s tile theme (`dark`/`light`/`satellite`). i18n (`i18n.js` + `locales/en.json`/`de.json`) ports the gpx-to-jfs lazy-fetch pattern; every user-facing string goes through `t()`. All in-app icons are inline SVG using `currentColor`.
+
+## Step 2 — Data model
+
+**Project** = `{ tracks: Track[] }`. **Store** additionally holds `currentTimeS`, `playing`, `playbackRate`, `selectedTrackId`, `mapTileTheme`, `appTheme`, `locale`.
+
+**Track**: `{ id, sourceFileName, plane, callsign, nickname, model, typeRole, icaoType, icaoAirline, livery, detectedBuildVariant, sourceVersion, timeOffsetS, visible, showAltitude, showSpeed, color, frames: { times, types, lat, lon, alt, pitch, bank, heading, vX, vY, vZ, elevation, staticCgToGround, groundFlags, opaquePayload }, events: [{timeS, variable, value}] }`.
+
+**Move**: sets `timeOffsetS` only (O(1)). **Remove**: splice from `project.tracks`. **Export**: rebase so the minimum effective frame time is ≈0, write via `encodeJfsFile(tracks, { jfsVersion: 21008, buildVariant })`.
+
+## Step 3 — Performance
+
+Worker-offloaded parse/encode (`jfs-codec-worker.js`, Blob-URL, main-thread fallback). Timeline LOD via min/max-preserving bucketing (`buildLodPyramid`). Map polyline decimation above `MAX_MAP_POINTS`. Timeline rendered on two stacked `<canvas>` layers (`#bg-canvas` data, `#fx-canvas` playhead/drag), viewport-sized.
+
+## Step 4 — `<jfs-map>`
+
+Leaflet, ported `TILES` pattern (dark/light/satellite), switched via a single "layer stack" icon button overlaid top-right on the map itself (inline SVG, à la flaticon's layer-stack glyph) that cycles dark → light → satellite → dark on click, rather than a toolbar dropdown or three separate buttons - `<jfs-map>` owns this control directly and updates `store.mapTileTheme` itself; the button's tooltip names the current layer and what clicking again switches to, since the icon itself doesn't change. Tracks rendered as altitude-colored/grey-on-ground polyline runs (`buildColoredRuns`, using the real `GroundFlags` bit), filtering out exact-(0,0) "Null Island" placeholder frames (`geo.js#isValidLatLon`) that some real recordings contain - both from the path itself and from the bounds used for auto-fit, so one degenerate frame can't wreck the zoom. Playhead is a rotated arrow marker in v1 (aircraft-type icon pipeline deferred); it holds its last valid position rather than jumping to Null Island when the interpolated frame is degenerate. Gear/flaps/light event markers are gated by the track's own `showEvents` toggle (a third EVT button alongside ALT/SPD in `<jfs-timeline>`'s sidebar, wired through `store.setTrackLane(id,'events',shown)`), not by focus/selection - markers used to only ever render for `store.selectedTrackId`, which meant they were invisible by default since nothing is selected on load (reported bug: "can't see any marks"). Built once per track in `_renderTracks` (`entry.eventMarkers`, an array of `L.circleMarker`s) rather than every `time-changed` tick, since event positions are static and a track can have thousands of them (rebuilding that many Leaflet layers at up to 60/s during playback would be a real perf problem) - `_syncEventMarkers()` just adds/removes the cached markers from the layer group and updates their opacity, called from `_renderTracks` and `_applyFocus`, never from `_updatePlayheads`. `entry.eventMarkers` is initialized to `null`, not `[]` - a genuine shipped bug: an empty array is truthy, which silently defeated the `if (!entry.eventMarkers)` "build once" guard for every track, so markers were never built *at all*, regardless of the selection-gating issue above (the actual root cause of "can't see any marks"). Focus mode: selecting a track dims+desaturates the others (including their event markers, if shown - `_syncEventMarkers` folds dim-opacity in) in both map and timeline via `store.selectedTrackId`; click empty map / Escape / toolbar button clears selection. The map re-fits to the union of all included tracks' bounds whenever the *set* of tracks changes (add/remove), tracked by a sorted-id key so unrelated updates (lane toggle, time-offset drag) don't re-zoom it (REQUIREMENTS.md) - this also covers "recenter after deleting a track" for free, since a delete changes the id-set key too. `L` (no modifier, ignored while focus is in a form control) cycles the layer, same as clicking the button - both funnel through the public `cycleLayer()` method. The arrow marker's rotation/color are mutated in place on the existing SVG element (`_updateArrowIcon()`) rather than replaced via `Marker#setIcon()` with a new `L.divIcon` every playhead tick - the latter was the cause of a first reported flicker (Leaflet tears down and reinserts the whole icon DOM node on every `setIcon()` call, visibly janky at up to 60 calls/s during playback). A second, subtler flicker source: `_updateArrowIcon()` caches the marker's DOM element (`entry.iconEl`) to avoid re-querying it every tick, but only re-fetches when the cache is missing - if Leaflet ever recreates the marker's icon node internally (e.g. on a viewreset/zoomend), the stale cached element keeps getting mutated invisibly while the new, actually-visible node sits frozen at its last rotation/color until the next such swap, which looks like an occasional snap-to-default flicker. Fixed by also re-fetching whenever `!entry.iconEl.isConnected` (detached from the document), self-healing regardless of why the swap happened. `will-change: transform` on `.jfs-arrow-icon` promotes it to its own compositing layer so the `drop-shadow` filter is rasterized once rather than on every rotation update.
+
+## Step 5 — `<jfs-timeline>`
+
+Canvas rows, one per track, sidebar (click to select) + canvas body (drag to shift time). Three independently toggleable overlaid lanes per row (altitude/speed/events - ALT/SPD/EVT buttons, `store.setTrackLane(id, lane, shown)`), same altitude/grey coloring and gear/flaps/light markers as the map (`track.showEvents`, not focus/selection - see Step 4). Mouse wheel zooms, Ctrl+wheel or scrubber-drag pans. Touch supported via Pointer Events. Same focus/dim behavior as the map, synced through the shared `Store`. Layout is one native-scrollbar region containing a sticky ruler header above a sidebar+canvas body row, so track rows scroll vertically as one unit (sidebar and canvas can never drift out of sync) and the ruler stays visible no matter how far down you've scrolled (REQUIREMENTS.md). Canvas resizing (which clears a canvas's contents as a side effect of the `.width`/`.height` properties) only runs when the computed size actually changes, decoupled from every draw call - the earlier version resized unconditionally on every draw, which silently cleared the altitude/speed chart during playback (every `time-changed` tick did a fx-only draw that still triggered a cache-clearing resize). `_zoomAround()` (both wheel-zoom and the +/- buttons funnel through it) calls `_keepCursorInView()` afterward, nudging `scrollTimeS` so the current playhead time never ends up outside the newly-zoomed window. `_maybeFitAllTracks()` sets `pixelsPerSecond` to fit the whole project duration the first time tracks go from empty to non-empty (mirrors `<jfs-map>`'s fitBounds-on-track-set-change), but not on later add/remove, so it doesn't override a zoom level the user has since chosen (REQUIREMENTS.md). `_scheduleDraw(fxOnly)` coalesces multiple calls into one rAF via an `_rafHandle` guard, but a caller arriving while a frame is already pending doesn't get its own rAF - discarding its `fxOnly` value outright was a real bug ("can't zoom during replay"): playback ticks continuously request fx-only draws, so a full-redraw request (zooming) arriving mid-playback was silently dropped and `#bg` never reflected the new `pixelsPerSecond`/`scrollTimeS`, even though the values themselves updated correctly. Fixed by accumulating an `_needsFullDraw` flag across every call in a pending-frame window instead of trusting only the first caller's `fxOnly`. `_tickPlayback()` resets `currentTimeS` to `0` (not the end time) once it reaches `projectDurationS()`, so playback is immediately ready to replay rather than sitting at the end. `Space` toggles play/pause globally (`app.js`, guarded against form-control focus, via `<jfs-timeline>`'s public `togglePlay()`) and `Shift+wheel` scrolls the row list vertically - added because plain wheel already means "zoom" over the canvas/ruler, so the native scrollbar had no wheel gesture of its own there (dragging it, or wheeling over the sidebar specifically, still also work).
+
+## Step 6 — `.jfs` codec
+
+Writer ported from `joinfs-gpx-to-jfs.js`, generalized to multiple aircraft, `buildVariant: 'fs2024'|'other'` controlling the tail layout. Reader closes 3 gaps in the sibling repo's test decoder (`ObjectPositionFrame`, `String8VariablesFrame`, `SimEventFrame` passthrough), defensively detects the ambiguous tail layout via speculative-parse-and-validate, decodes `AircraftPosition`/`ObjectPosition` fully (version-gated defaults applied) so it can always re-encode canonically. `variables.js` decodes recognized gear/flaps/light variable frames into `track.events` alongside opaque passthrough bytes.
+
+## Step 6b — GPX import
+
+**Revised from the original plan** (which called for porting `makeCore()`): `.gpx` files (drag-drop or `[+]`) instead open a modal embedding the real `<joinfs-gpx-to-jfs>` custom element, vendored verbatim at `src/vendor/joinfs-gpx-to-jfs.js` (not reimplemented) - see `src/components/jfs-gpx-modal.js`. This gets ground-clamping (on-ground altitude floor derived from the GPX's own recorded altitude per detected ground stretch, not an external elevation fetch), derived attitude, and derived gear/flaps/lights "for free" from the tested upstream logic, instead of the plan's original much-reduced reimplementation (which only derived position/altitude/heading/speed and produced no events - see the superseded note in `docs/format-notes.md`).
+
+Flow: `jfs-toolbar.js#importFiles` detects a `.gpx` file and calls `openGpxImportModal(file)` instead of decoding it directly. That function lazy-loads the vendored script once (`customElements.get('joinfs-gpx-to-jfs')` guards against redefining it), opens a `<dialog>` containing `<joinfs-gpx-to-jfs>`, and pre-loads the file into it via its documented `loadFile(file)` method (so the user doesn't have to re-select/re-drop it) - but does **not** set `auto-convert`, so the user can still review/adjust the component's own form (ICAO type, callsign, livery, FS2024-vs-other, etc.) before clicking its own Convert button. The component dispatches a `'converted'` CustomEvent (`detail: {info, blob, filename}`) once done; `openGpxImportModal` resolves with `{blob, filename}` and closes the dialog, or resolves `null` if the user closes the modal without converting (Escape, the close button, or the dialog's own `close`/`cancel` events - all funnel through one idempotent `finish()`).
+
+The resulting `.jfs` Blob is then decoded through the exact same `tracksFromJfsBuffer` path as any other `.jfs` import (`file.arrayBuffer()` → `decodeJfsFile`), so GPX and JFS import converge on one code path immediately after the modal step - the rest of the app never needs a GPX-specific branch.
+
+## Step 7 — Testing
+
+`node --test` (default file discovery, no custom `test/run.js` wrapper - Node's own recursive discovery under a directory named `test` made a wrapper redundant and caused a `run() called recursively` warning). Round-trip codec tests, reader-gap regression tests, project-model offset/remove/export tests, variables/geo unit tests. **Not yet implemented in this pass** (deviation from the original Step 7 scope, disclosed rather than silently dropped): the Puppeteer/browser test suite for `<jfs-map>`/`<jfs-timeline>` interaction and the `reference.test.js` cross-check against `joinfs-gpx-to-jfs-webcomponent`'s Python writer.
+
+## Documented limitations
+
+Non-aircraft `Obj[]` dropped on save. Livery preserved only for `buildVariant: 'fs2024'`. Gear/flaps/light markers only recognize the fixed VU table. No per-frame trim/split. Tail-layout detection on read is a heuristic. Playhead marker is a simple arrow in v1 (aircraft-icon upgrade deferred). Control-surface deflections and angular velocity/acceleration are read but not modeled by the `Track` shape, so they're always written back as zero/neutral on save (see `docs/format-notes.md`). GPX import requires an extra modal step (the embedded real converter, not silent/automatic) and, being a full page-navigable UI component, is heavier than a from-scratch minimal importer would be - see Step 6b. No Puppeteer/browser test suite yet (Step 7).
+
+## Verification
+
+`npm test` passes; manual end-to-end via a static server (Live Server): import `.jfs`/`.gpx` via `[+]`/`Ctrl+O` and drag-and-drop, all tracks visible on map (3 tile themes, `L` or the layer button cycles them) and timeline (toggleable lanes), drag-to-shift and remove work, focus mode dims/desaturates and syncs between views, app theme switch, `?lang=de` loads German strings, `Ctrl+S`/Save prompts for build-variant and produces one `.jfs` reloadable by JoinFS.

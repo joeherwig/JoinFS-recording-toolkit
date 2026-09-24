@@ -1,0 +1,23 @@
+{
+  "name": "joinfs-jfs-toolkit",
+  "version": "0.1.0",
+  "description": "Browser toolkit to visualize and edit JoinFS .jfs flight-recording files on a map and timeline.",
+  "keywords": [
+    "joinfs",
+    "jfs",
+    "flight-simulator",
+    "msfs",
+    "web-component",
+    "custom-element"
+  ],
+  "license": "CC-BY-NC-SA-4.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test",
+    "serve": "node tools/serve.js"
+  }
+}

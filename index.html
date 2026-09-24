@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>JoinFS JFS Toolkit</title>
+<style>
+  :root {
+    --bg: #0d0f14; --fg: #e2e8f0; --panel-bg: #12141a; --toolbar-bg: #0d0f14;
+    --btn-bg: #1e2433; --btn-bg-hover: #2d3748; --border: #262b36; --muted: #6b7280;
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f5f7; --fg: #12141a; --panel-bg: #ffffff; --toolbar-bg: #ffffff;
+    --btn-bg: #eef0f3; --btn-bg-hover: #e2e5ea; --border: #d7dbe1; --muted: #6b7280;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: grid; grid-template-rows: auto 1fr minmax(220px, 32vh);
+    background: var(--bg); color: var(--fg); font-family: system-ui, sans-serif;
+  }
+  jfs-map { min-height: 200px; }
+  jfs-timeline { min-height: 0; }
+</style>
+</head>
+<body>
+  <jfs-toolbar></jfs-toolbar>
+  <jfs-map theme="dark"></jfs-map>
+  <jfs-timeline></jfs-timeline>
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
