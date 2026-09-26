@@ -35,3 +35,8 @@ Runs the unit test suite (`node --test`) covering the `.jfs` codec, gear/flaps/l
 ## Known v1 limitations
 
 See the "Documented limitations" section of [PLAN.md](PLAN.md) — briefly: non-aircraft scenery objects aren't preserved, livery is only kept when saving in the FS2024 format, only a fixed set of simulator variables (gear/flaps/lights) get event markers, and playhead markers are a simple arrow rather than an aircraft-type-shaped icon.
+
+## License
+
+[Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International](LICENSE) (CC BY-NC-SA 4.0), matching
+the vendored `joinfs-gpx-to-jfs-webcomponent` component this toolkit embeds.
