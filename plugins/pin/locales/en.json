@@ -1,0 +1,5 @@
+{
+  "action.toggle": "Pin / unpin track",
+  "toast.pinned": "{name} is pinned: it cannot be moved in time.",
+  "toast.unpinned": "{name} is no longer pinned."
+}

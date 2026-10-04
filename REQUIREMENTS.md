@@ -52,7 +52,7 @@
 - **File I/O**: File System Access API as primary mechanism (Chromium-first), falling back to `<input type=file>` + Blob download. Pure client-side web app, no backend.
 - No project-file/autosave format — the exported `.jfs` itself is the resume point.
 - Standalone repo; reusable logic is ported/adapted into this repo's own files (not npm/submodule dependencies), each ported function header-commented with its origin.
-- Writer always targets `Sim.VERSION` 21008; tail layout (2-string vs. 3-string incl. livery) is chosen by the user at save time.
+- Writer always targets file version 21008 in the **current JoinFS layout** (96-byte aircraft position frames, no `staticCgToGround`); the reader auto-detects that layout and the 26.6-beta one (100-byte frames) by probing - see `docs/format-notes.md`. Tail layout (2-string vs. 3-string incl. livery) is chosen by the user at save time.
 
 ## `.jfs` format reference
 - Authoritative spec: `JoinFS/docs/recording-protocol.md` — little-endian binary, `.NET BinaryWriter`-style strings, no magic number/checksum/length-framing, version-gated fields, ~20Hz recording rate, all recorded objects share one global recording clock.

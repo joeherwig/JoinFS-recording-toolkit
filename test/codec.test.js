@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { encodeJfsFile, decodeJfsFile, TARGET_VERSION } from '../src/jfs-codec.js';
+import { encodeJfsFile, decodeJfsFile, TARGET_VERSION, LAYOUT } from '../src/jfs-codec.js';
 import { buildSyntheticTrack } from './helpers/jfs-samples.js';
 
 function closeTo(a, b, eps, msg) {
@@ -133,4 +133,87 @@ test('events are only recorded on a value change, not on every repeated frame (d
   assert.equal(events[0].timeS, 0.1);
   assert.equal(events[1].label, 'Gear: Up');
   assert.equal(events[1].timeS, 0.3);
+});
+
+// ---- position-frame layouts (current JoinFS vs 26.6-beta; same version number 21008) -------------
+
+test('writer emits the current layout: 96-byte position frames, no static CG field', () => {
+  const track = buildSyntheticTrack({ frameCount: 10 });
+  const current = encodeJfsFile([track], { buildVariant: 'other' });
+  const legacy = encodeJfsFile([track], { buildVariant: 'other', layout: LAYOUT.LEGACY_STATIC_CG });
+  assert.equal(legacy.length - current.length, 10 * 4, 'the legacy layout is exactly 4 bytes per position frame longer');
+  // header(2+4) + plane(1) + 3 strings + typerole(1) + frameCount(4) precede the frames
+  const dv = new DataView(current.buffer);
+  assert.equal(dv.getInt16(0, true), 21008);
+  let p = 6 + 1;
+  for (let i = 0; i < 3; i++) p += 1 + current[p]; // 7-bit length prefix < 128 for these short strings
+  p += 1 + 4;
+  assert.equal(current[p], 1, 'first frame is an AircraftPosition frame');
+  assert.equal(current[p + 96], 1, 'the second frame starts exactly 96 bytes later');
+  // last byte of the first frame is the ground-flags byte (synthetic track starts on the ground)
+  assert.equal(current[p + 95], 1);
+});
+
+test('reader auto-detects the layout and reports it', () => {
+  const track = buildSyntheticTrack({ frameCount: 40 });
+  for (const buildVariant of ['fs2024', 'other']) {
+    const current = decodeJfsFile(encodeJfsFile([track], { buildVariant }).buffer);
+    assert.equal(current.layout, LAYOUT.CURRENT);
+    assert.equal(current.warnings.length, 0);
+    assert.equal(current.tracks[0].sourceLayout, LAYOUT.CURRENT);
+    assert.ok(Number.isNaN(current.tracks[0].frames.staticCgToGround[0]) || current.tracks[0].frames.staticCgToGround[0] === 0);
+
+    const legacy = decodeJfsFile(encodeJfsFile([track], { buildVariant, layout: LAYOUT.LEGACY_STATIC_CG }).buffer);
+    assert.equal(legacy.layout, LAYOUT.LEGACY_STATIC_CG);
+    assert.equal(legacy.tracks[0].frames.times.length, 40);
+    assert.equal(legacy.tracks[0].frames.staticCgToGround[0], 1.5, 'the legacy layout still carries the static CG height');
+    assert.equal(legacy.tracks[0].callsign, track.callsign);
+    assert.ok(legacy.warnings.some((w) => /older recording layout/.test(w)));
+  }
+});
+
+test('layout detection works for multi-aircraft files in both layouts', () => {
+  const a = buildSyntheticTrack({ id: 'a', callsign: 'ALPHA', frameCount: 20 });
+  const b = buildSyntheticTrack({ id: 'b', callsign: 'BRAVO', frameCount: 33, startTime: 5 });
+  for (const layout of [LAYOUT.CURRENT, LAYOUT.LEGACY_STATIC_CG]) {
+    const out = decodeJfsFile(encodeJfsFile([a, b], { buildVariant: 'fs2024', layout }).buffer);
+    assert.equal(out.layout, layout);
+    assert.deepEqual(out.tracks.map((t) => [t.callsign, t.frames.times.length]), [['ALPHA', 20], ['BRAVO', 33]]);
+  }
+});
+
+test('a file that fits no layout is rejected with a message that lists what was tried', () => {
+  const bytes = encodeJfsFile([buildSyntheticTrack({ frameCount: 30 })], { buildVariant: 'other' });
+  const damaged = bytes.slice(0, bytes.length - 40); // cut into the last frames and the tail
+  assert.throws(() => decodeJfsFile(damaged.buffer), /could not be read as any known \.jfs layout.*current.*legacy-staticcg/s);
+});
+
+test('pre-21008 files never probe the static CG layout', () => {
+  const bytes = encodeJfsFile([buildSyntheticTrack({ frameCount: 12 })], { buildVariant: 'other' });
+  new DataView(bytes.buffer).setInt16(0, 21007, true);
+  const out = decodeJfsFile(bytes.buffer);
+  assert.equal(out.layout, LAYOUT.CURRENT);
+  assert.equal(out.version, 21007);
+});
+
+test('angular velocity, acceleration, controls and the full flags byte survive a round trip', () => {
+  const track = buildSyntheticTrack({ frameCount: 8 });
+  track.frames.kin = new Float32Array(8 * 6).map((_, i) => 0.25 * (i + 1));
+  track.frames.ctl = new Int16Array(8 * 5).map((_, i) => (i * 1000) - 8000);
+  track.frames.groundFlags = new Uint8Array(8).fill(3); // on ground + elevation correction
+  for (const layout of [LAYOUT.CURRENT, LAYOUT.LEGACY_STATIC_CG]) {
+    const out = decodeJfsFile(encodeJfsFile([track], { buildVariant: 'other', layout }).buffer).tracks[0];
+    assert.deepEqual(Array.from(out.frames.kin), Array.from(track.frames.kin), `${layout} kin`);
+    assert.deepEqual(Array.from(out.frames.ctl), Array.from(track.frames.ctl), `${layout} ctl`);
+    assert.deepEqual(Array.from(out.frames.groundFlags), Array.from(track.frames.groundFlags), `${layout} flags`);
+  }
+});
+
+test('decode -> encode reaches a fixed point after one pass (only the degrees/radians float rounding differs)', () => {
+  const track = buildSyntheticTrack({ frameCount: 30 });
+  track.frames.kin = new Float32Array(30 * 6).map((_, i) => Math.fround(Math.sin(i)));
+  track.frames.ctl = new Int16Array(30 * 5).map((_, i) => (i * 37) % 16384);
+  const once = encodeJfsFile(decodeJfsFile(encodeJfsFile([track], { buildVariant: 'fs2024' }).buffer).tracks, { buildVariant: 'fs2024' });
+  const twice = encodeJfsFile(decodeJfsFile(once.buffer).tracks, { buildVariant: 'fs2024' });
+  assert.equal(Buffer.compare(Buffer.from(once), Buffer.from(twice)), 0);
 });

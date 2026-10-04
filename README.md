@@ -1,4 +1,4 @@
-# joinfs-jfs-toolkit
+# JoinFS-recording-toolkit
 
 A browser-based toolkit to **visualize** and **edit** [JoinFS](https://joinfs.net/) `.jfs` flight-recording files on a map and a video-editor-style timeline.
 
@@ -15,6 +15,12 @@ GPX import embeds `joinfs-gpx-to-jfs-webcomponent` directly (vendored verbatim a
 `docs/format-notes.md`.
 
 See [REQUIREMENTS.md](REQUIREMENTS.md) for the full requirements and [PLAN.md](PLAN.md) for the implementation plan and known v1 limitations.
+
+## Documentation
+
+The user guide and the plugin documentation are in [docs/wiki](docs/wiki/Home.md) (the sources of the project wiki):
+getting started, map and timeline, editing tracks (move, pin, trim), saving and formats, keyboard and mouse, the plugin
+concept and how to write a plugin.
 
 ## Running locally
 
@@ -35,3 +41,8 @@ Runs the unit test suite (`node --test`) covering the `.jfs` codec, gear/flaps/l
 ## Known v1 limitations
 
 See the "Documented limitations" section of [PLAN.md](PLAN.md) — briefly: non-aircraft scenery objects aren't preserved, livery is only kept when saving in the FS2024 format, only a fixed set of simulator variables (gear/flaps/lights) get event markers, and playhead markers are a simple arrow rather than an aircraft-type-shaped icon.
+
+## License
+
+[Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International](LICENSE) (CC BY-NC-SA 4.0), matching
+the vendored `joinfs-gpx-to-jfs-webcomponent` component this toolkit embeds.

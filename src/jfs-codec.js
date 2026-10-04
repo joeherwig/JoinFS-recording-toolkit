@@ -12,6 +12,11 @@
 //  - lat/lon/pitch/bank/heading are stored in RADIANS, altitude/elevation/staticCgToGround in METRES.
 //    This module converts to/from degrees at the read/write boundary so the rest of the app only
 //    ever deals in degrees (Leaflet-friendly) - see DEG2RAD/RAD2DEG usage below.
+//  - TWO position-frame layouts exist under one version number (21008): the older JoinFS builds
+//    (26.6-beta) append a 4-byte `staticCgToGround` to every AircraftPosition payload (91 bytes), the
+//    current JoinFS (upstream #181, JfsFrames.cs) no longer writes/reads it (87 bytes). The version
+//    cannot tell them apart, so the reader probes both and keeps the one that parses the whole file
+//    cleanly; the writer emits the current layout. See docs/format-notes.md.
 //  - all recorded objects in a file share one global recording clock (confirmed directly in
 //    JoinFS/Recorder.cs); frame `time` is seconds since that shared clock started.
 
@@ -31,6 +36,14 @@ export const FRAME_TYPE = {
 
 const MIN_SUPPORTED_VERSION = 10022;
 export const TARGET_VERSION = 21008;
+
+/** Position-frame layouts. `current` = what JoinFS writes/reads today; `legacy-staticcg` = 26.6-beta and our older exports. */
+export const LAYOUT = { CURRENT: 'current', LEGACY_STATIC_CG: 'legacy-staticcg' };
+// Files below this version never carry the static CG field, whatever build wrote them.
+const STATIC_CG_VERSION = 21008;
+
+const LAT_LIMIT_RAD = Math.PI / 2 + 1e-3;
+const LON_LIMIT_RAD = Math.PI + 1e-3;
 
 export class JfsError extends Error {
   constructor(message, code) {
@@ -72,15 +85,26 @@ function netStringBytes(s) {
 }
 
 // ---- position frames -------------------------------------------------------
-// AircraftPositionFrame payload (after the 9-byte type+time header), current version (21008):
+// AircraftPositionFrame payload (after the 9-byte type+time header):
 //   lat,lon,alt f64 x3 (24) | pitch,bank,heading f32 x3 (12) | velXYZ f32 x3 (12)
 //   | angVelXYZ+accXYZ f32 x6, unused by this app (24) | rudder/elevator/aileron/brakeL/brakeR i16 x5,
-//   unused by this app (10) | elevation f32 (4) | groundFlags u8 (1) | staticCgToGround f32 (4, v>=21008)
-// = 91 bytes at v>=21008 (87 at 10023<=v<21008, 82 at v<10023 - see PLAN.md Step 6).
+//   unused by this app (10) | elevation f32 (4) | groundFlags u8 (1) | staticCgToGround f32 (4, legacy-staticcg only)
+// = 87 bytes in the current layout (and at 10023<=v<21008), 91 bytes in the legacy-staticcg layout
+// (82 at v<10023 - see PLAN.md Step 6).
 
-function decodeAircraftPositionFrame(dv, pos, version) {
-  const lat = dv.getFloat64(pos, true) * RAD2DEG; pos += 8;
-  const lon = dv.getFloat64(pos, true) * RAD2DEG; pos += 8;
+function checkPlausible(latRad, lonRad, pos) {
+  // A wrong layout lands in the middle of a frame; garbage doubles are almost never a valid lat/lon.
+  if (!(Math.abs(latRad) <= LAT_LIMIT_RAD && Math.abs(lonRad) <= LON_LIMIT_RAD)) {
+    throw new JfsError(`Implausible position at byte offset ${pos} - wrong frame layout or corrupt file.`, 'badFrame');
+  }
+}
+
+function decodeAircraftPositionFrame(dv, pos, version, hasStaticCg) {
+  const start = pos;
+  const latRad = dv.getFloat64(pos, true), lonRad = dv.getFloat64(pos + 8, true);
+  checkPlausible(latRad, lonRad, start);
+  const lat = latRad * RAD2DEG; pos += 8;
+  const lon = lonRad * RAD2DEG; pos += 8;
   const alt = dv.getFloat64(pos, true); pos += 8;
   const pitch = dv.getFloat32(pos, true) * RAD2DEG; pos += 4;
   const bank = dv.getFloat32(pos, true) * RAD2DEG; pos += 4;
@@ -88,24 +112,31 @@ function decodeAircraftPositionFrame(dv, pos, version) {
   const vX = dv.getFloat32(pos, true); pos += 4;
   const vY = dv.getFloat32(pos, true); pos += 4;
   const vZ = dv.getFloat32(pos, true); pos += 4;
-  pos += 24; // angular velocity + acceleration - not modeled by this app
-  pos += 10; // rudder/elevator/aileron/brakeL/brakeR - not modeled by this app
+  // angular velocity + acceleration (6 floats) and rudder/elevator/aileron/brakeL/brakeR (5 raw int16) are not
+  // shown by the app but are kept, so a saved file replays exactly like the original: JoinFS integrates the
+  // angular velocity to advance the attitude between its periodic updates.
+  const kin = [];
+  for (let i = 0; i < 6; i++) { kin.push(dv.getFloat32(pos, true)); pos += 4; }
+  const ctl = [];
+  for (let i = 0; i < 5; i++) { ctl.push(dv.getInt16(pos, true)); pos += 2; }
   let elevation = 0, groundFlags = 0, staticCgToGround = NaN;
   if (version >= 10023) {
     elevation = dv.getFloat32(pos, true); pos += 4;
     groundFlags = dv.getUint8(pos); pos += 1;
   }
-  if (version >= 21008) {
+  if (hasStaticCg) {
     staticCgToGround = dv.getFloat32(pos, true); pos += 4;
   }
-  return { lat, lon, alt, pitch, bank, heading, vX, vY, vZ, elevation, groundFlags, staticCgToGround, next: pos };
+  return { lat, lon, alt, pitch, bank, heading, vX, vY, vZ, kin, ctl, elevation, groundFlags, staticCgToGround, next: pos };
 }
 
 // ObjectPositionFrame payload: same lat/lon/alt/pitch/bank/heading/velocity, but no controls and no
 // staticCgToGround (recording-protocol.md §4.1). Rare within an Aircraft's own frame list, but legal.
 function decodeObjectPositionFrame(dv, pos, version) {
-  const lat = dv.getFloat64(pos, true) * RAD2DEG; pos += 8;
-  const lon = dv.getFloat64(pos, true) * RAD2DEG; pos += 8;
+  const latRad = dv.getFloat64(pos, true), lonRad = dv.getFloat64(pos + 8, true);
+  checkPlausible(latRad, lonRad, pos);
+  const lat = latRad * RAD2DEG; pos += 8;
+  const lon = lonRad * RAD2DEG; pos += 8;
   const alt = dv.getFloat64(pos, true); pos += 8;
   const pitch = dv.getFloat32(pos, true) * RAD2DEG; pos += 4;
   const bank = dv.getFloat32(pos, true) * RAD2DEG; pos += 4;
@@ -113,16 +144,17 @@ function decodeObjectPositionFrame(dv, pos, version) {
   const vX = dv.getFloat32(pos, true); pos += 4;
   const vY = dv.getFloat32(pos, true); pos += 4;
   const vZ = dv.getFloat32(pos, true); pos += 4;
-  pos += 24; // angular velocity + acceleration
+  const kin = [];
+  for (let i = 0; i < 6; i++) { kin.push(dv.getFloat32(pos, true)); pos += 4; } // angular velocity + acceleration
   let elevation = 0, groundFlags = 0;
   if (version >= 10023) {
     elevation = dv.getFloat32(pos, true); pos += 4;
     groundFlags = dv.getUint8(pos); pos += 1;
   }
-  return { lat, lon, alt, pitch, bank, heading, vX, vY, vZ, elevation, groundFlags, staticCgToGround: NaN, next: pos };
+  return { lat, lon, alt, pitch, bank, heading, vX, vY, vZ, kin, ctl: null, elevation, groundFlags, staticCgToGround: NaN, next: pos };
 }
 
-function encodeAircraftPositionFrame(dv, u8, pos, f) {
+function encodeAircraftPositionFrame(dv, u8, pos, f, withStaticCg) {
   dv.setFloat64(pos, f.lat * DEG2RAD, true); pos += 8;
   dv.setFloat64(pos, f.lon * DEG2RAD, true); pos += 8;
   dv.setFloat64(pos, f.alt, true); pos += 8;
@@ -132,15 +164,17 @@ function encodeAircraftPositionFrame(dv, u8, pos, f) {
   dv.setFloat32(pos, f.vX, true); pos += 4;
   dv.setFloat32(pos, f.vY, true); pos += 4;
   dv.setFloat32(pos, f.vZ, true); pos += 4;
-  for (let i = 0; i < 6; i++) { dv.setFloat32(pos, 0, true); pos += 4; } // angular velocity + acceleration
-  for (let i = 0; i < 5; i++) { dv.setInt16(pos, 0, true); pos += 2; } // controls
+  for (let i = 0; i < 6; i++) { dv.setFloat32(pos, f.kin ? f.kin[i] : 0, true); pos += 4; } // angular velocity + acceleration
+  for (let i = 0; i < 5; i++) { dv.setInt16(pos, f.ctl ? f.ctl[i] : 0, true); pos += 2; } // rudder, elevator, aileron, brakeL, brakeR
   dv.setFloat32(pos, f.elevation || 0, true); pos += 4;
-  dv.setUint8(pos, f.groundFlags & 1); pos += 1;
-  dv.setFloat32(pos, f.staticCgToGround, true); pos += 4; // NaN if unknown, same convention as the network message
+  dv.setUint8(pos, f.groundFlags & 0xff); pos += 1; // bit 0 on ground, bit 1 sender had elevation correction
+  // The current JoinFS layout has no staticCgToGround field; only the legacy-staticcg layout (kept for
+  // tests and for talking to 26.6-beta builds) appends it. NaN if unknown, same convention as the network message.
+  if (withStaticCg) { dv.setFloat32(pos, f.staticCgToGround, true); pos += 4; }
   return pos;
 }
 
-const AIRCRAFT_POSITION_FRAME_SIZE = 9 + 91; // header + payload, at TARGET_VERSION
+const POSITION_PAYLOAD_SIZE = { [LAYOUT.CURRENT]: 87, [LAYOUT.LEGACY_STATIC_CG]: 91 }; // after the 9-byte frame header
 
 // ---- variable frames -------------------------------------------------------
 
@@ -244,22 +278,49 @@ function detectTail(u8, dv, pos, version, moreAircraftFollow) {
 // ---- decode -----------------------------------------------------------------
 
 /**
- * Decodes a `.jfs` ArrayBuffer into `{ version, tracks, warnings }`.
+ * Decodes a `.jfs` ArrayBuffer into `{ version, layout, tracks, warnings }`.
  * Each element of `tracks` matches the Track shape in PLAN.md Step 2 (columnar typed-array frames,
  * plus a secondary `events` list decoded from recognized gear/flaps/light variable frames).
  * Non-aircraft `Obj[]` records are out of scope for v1 (see PLAN.md) - if present, a warning is
  * returned and they are not represented in `tracks` or preserved on a later save.
+ *
+ * The position-frame layout is probed, not read from the version (see the header comment): every
+ * candidate layout is tried in order and the first that parses the whole file cleanly wins.
  */
 export function decodeJfsFile(arrayBuffer, { sourceFileName = '', onProgress } = {}) {
   const u8 = new Uint8Array(arrayBuffer);
   const dv = new DataView(arrayBuffer);
-  const warnings = [];
-  let p = 0;
   if (u8.length < 6) throw new JfsError('File is too small to be a .jfs recording.', 'tooSmall');
-  const version = dv.getInt16(p, true); p += 2;
+  const version = dv.getInt16(0, true);
   if (version < MIN_SUPPORTED_VERSION) {
     throw new JfsError(`Recording version ${version} is older than JoinFS itself supports (minimum ${MIN_SUPPORTED_VERSION}).`, 'badVersion');
   }
+  const candidates = version >= STATIC_CG_VERSION ? [LAYOUT.CURRENT, LAYOUT.LEGACY_STATIC_CG] : [LAYOUT.CURRENT];
+  const failures = [];
+  // pass 1: strict (tail and trailer must validate); pass 2: tolerate an ambiguous tail like v1 did
+  for (const strict of [true, false]) {
+    for (const layout of candidates) {
+      try {
+        const result = parseJfs(arrayBuffer, version, layout, { sourceFileName, onProgress, strict });
+        if (layout === LAYOUT.LEGACY_STATIC_CG) {
+          result.warnings.unshift('This file uses the older recording layout (with a static CG height per position frame). It is read correctly, but saving writes the current JoinFS layout, which does not store that height.');
+        }
+        return result;
+      } catch (err) {
+        if (!(err instanceof JfsError) && !(err instanceof RangeError)) throw err;
+        failures.push(`${layout}${strict ? '' : ' (lenient)'}: ${err.message}`);
+      }
+    }
+  }
+  throw new JfsError(`This file could not be read as any known .jfs layout (${failures.join('; ')}). It may be corrupt or from a newer/incompatible JoinFS build.`, 'badFrame');
+}
+
+function parseJfs(arrayBuffer, version, layout, { sourceFileName, onProgress, strict }) {
+  const u8 = new Uint8Array(arrayBuffer);
+  const dv = new DataView(arrayBuffer);
+  const hasStaticCg = layout === LAYOUT.LEGACY_STATIC_CG;
+  const warnings = [];
+  let p = 2;
   const aircraftCount = dv.getInt32(p, true); p += 4;
   const tracks = [];
 
@@ -285,6 +346,8 @@ export function decodeJfsFile(arrayBuffer, { sourceFileName = '', onProgress } =
     const elevation = new Float32Array(frameCount);
     const staticCgToGround = new Float32Array(frameCount);
     const groundFlags = new Uint8Array(frameCount);
+    const kin = new Float32Array(frameCount * 6); // angVelXYZ, accXYZ per frame
+    const ctl = new Int16Array(frameCount * 5);   // rudder, elevator, aileron, brakeL, brakeR (raw, value * 16384)
     const opaquePayload = new Array(frameCount).fill(null);
     const events = [];
     // The recorder writes a variable's current value periodically, not only when it changes (real
@@ -304,12 +367,14 @@ export function decodeJfsFile(arrayBuffer, { sourceFileName = '', onProgress } =
       types[i] = type;
       if (type === FRAME_TYPE.AIRCRAFT_POSITION || type === FRAME_TYPE.OBJECT_POSITION) {
         const f = type === FRAME_TYPE.AIRCRAFT_POSITION
-          ? decodeAircraftPositionFrame(dv, p, version)
+          ? decodeAircraftPositionFrame(dv, p, version, hasStaticCg)
           : decodeObjectPositionFrame(dv, p, version);
         lat[i] = f.lat; lon[i] = f.lon; alt[i] = f.alt;
         pitch[i] = f.pitch; bank[i] = f.bank; heading[i] = f.heading;
         vX[i] = f.vX; vY[i] = f.vY; vZ[i] = f.vZ;
         elevation[i] = f.elevation; groundFlags[i] = f.groundFlags; staticCgToGround[i] = f.staticCgToGround;
+        for (let k = 0; k < 6; k++) kin[i * 6 + k] = f.kin[k];
+        if (f.ctl) for (let k = 0; k < 5; k++) ctl[i * 5 + k] = f.ctl[k];
         p = f.next;
       } else if (type === FRAME_TYPE.SIM_EVENT) {
         opaquePayload[i] = u8.slice(p, p + 8);
@@ -337,6 +402,7 @@ export function decodeJfsFile(arrayBuffer, { sourceFileName = '', onProgress } =
 
     const tail = detectTail(u8, dv, p, version, a < aircraftCount - 1);
     if (tail.ambiguous) {
+      if (strict) throw new JfsError(`Aircraft #${a + 1}: tail strings do not validate for the ${layout} layout.`, 'badTail');
       warnings.push(`Aircraft "${callsign || model}" (#${a + 1}): could not confidently determine the build-variant tail layout; livery/ICAO fields may be misread.`);
     }
     p = tail.next;
@@ -346,23 +412,29 @@ export function decodeJfsFile(arrayBuffer, { sourceFileName = '', onProgress } =
       sourceFileName,
       plane, callsign, nickname, model, typeRole,
       icaoType: tail.icaoType, icaoAirline: tail.icaoAirline, livery: tail.livery,
-      detectedBuildVariant: tail.detectedBuildVariant, sourceVersion: version,
+      detectedBuildVariant: tail.detectedBuildVariant, sourceVersion: version, sourceLayout: layout,
       timeOffsetS: 0, visible: true, showAltitude: true, showSpeed: true, showEvents: true,
-      frames: { times, types, lat, lon, alt, pitch, bank, heading, vX, vY, vZ, elevation, staticCgToGround, groundFlags, opaquePayload },
+      frames: { times, types, lat, lon, alt, pitch, bank, heading, vX, vY, vZ, kin, ctl, elevation, staticCgToGround, groundFlags, opaquePayload },
       events,
     });
   }
 
   let objectCount = 0;
+  if (strict && p !== u8.length && p + 4 > u8.length) {
+    throw new JfsError(`Unexpected ${u8.length - p} trailing byte(s) after the aircraft records.`, 'badTrailer');
+  }
   if (p + 4 <= u8.length) {
     objectCount = dv.getInt32(p, true);
     p += 4;
+    if (strict && (objectCount < 0 || objectCount > 100000 || (objectCount === 0 && p !== u8.length))) {
+      throw new JfsError('The section after the aircraft records is not a valid object count.', 'badTrailer');
+    }
     if (objectCount > 0) {
       warnings.push(`${objectCount} non-aircraft object(s) present in this file and will not be preserved if you save from this project (see README/PLAN.md limitations).`);
     }
   }
 
-  return { version, tracks, warnings };
+  return { version, layout, tracks, warnings };
 }
 
 // ---- encode -----------------------------------------------------------------
@@ -372,10 +444,14 @@ export function decodeJfsFile(arrayBuffer, { sourceFileName = '', onProgress } =
  * project-model.js) into a single `.jfs` file.
  * `buildVariant`: 'fs2024' writes the 3-string tail (livery+icaoType+icaoAirline); 'other' writes
  * the 2-string tail (icaoType+icaoAirline only - no livery field at all, matching non-FS2024
- * builds exactly). Always targets TARGET_VERSION (21008).
+ * builds exactly). Always targets TARGET_VERSION (21008). `layout` defaults to the current JoinFS
+ * position-frame layout (no staticCgToGround); 'legacy-staticcg' exists for tests and 26.6-beta.
  */
-export function encodeJfsFile(tracks, { buildVariant = 'fs2024' } = {}) {
+export function encodeJfsFile(tracks, { buildVariant = 'fs2024', layout = LAYOUT.CURRENT } = {}) {
   const fs2024 = buildVariant === 'fs2024';
+  const withStaticCg = layout === LAYOUT.LEGACY_STATIC_CG;
+  const positionPayload = POSITION_PAYLOAD_SIZE[layout];
+  if (!positionPayload) throw new Error(`Unknown layout "${layout}".`);
   const version = TARGET_VERSION;
 
   // First pass: compute size.
@@ -396,7 +472,7 @@ export function encodeJfsFile(tracks, { buildVariant = 'fs2024' } = {}) {
     for (let i = 0; i < frameCount; i++) {
       const type = track.frames.types[i];
       frameBytes += 9 + ((type === FRAME_TYPE.AIRCRAFT_POSITION || type === FRAME_TYPE.OBJECT_POSITION)
-        ? 91
+        ? positionPayload
         : track.frames.opaquePayload[i].length);
     }
     size += 1 + headLen + 1 + 4 + frameBytes + tailLen; // plane + head + typerole + frameCount + frames + tail
@@ -428,7 +504,9 @@ export function encodeJfsFile(tracks, { buildVariant = 'fs2024' } = {}) {
           vX: track.frames.vX[i], vY: track.frames.vY[i], vZ: track.frames.vZ[i],
           elevation: track.frames.elevation[i], groundFlags: track.frames.groundFlags[i],
           staticCgToGround: track.frames.staticCgToGround[i],
-        });
+          kin: track.frames.kin ? track.frames.kin.subarray(i * 6, i * 6 + 6) : null,
+          ctl: track.frames.ctl ? track.frames.ctl.subarray(i * 5, i * 5 + 5) : null,
+        }, withStaticCg);
       } else {
         dv.setUint8(p, type); p += 1;
         dv.setFloat64(p, t, true); p += 8;

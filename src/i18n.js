@@ -18,10 +18,18 @@ async function loadLocale(locale) {
   return promise;
 }
 
+const extra = {};
+
+/** Plugins add their own strings under a `plugin.<id>.` prefix (works before or after setLocale). */
+export function addMessages(prefix, dict) {
+  for (const [k, v] of Object.entries(dict || {})) extra[prefix + k] = v;
+  if (currentStrings) Object.assign(currentStrings, extra);
+}
+
 export async function setLocale(locale) {
   const [en, strings] = await Promise.all([loadLocale('en'), locale === 'en' ? Promise.resolve({}) : loadLocale(locale)]);
   current = locale;
-  currentStrings = { ...en, ...strings };
+  currentStrings = { ...en, ...strings, ...extra };
   return currentStrings;
 }
 

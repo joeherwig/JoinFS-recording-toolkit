@@ -4,14 +4,16 @@
 export const hasFileSystemAccess = typeof window !== 'undefined' && 'showOpenFilePicker' in window;
 
 const JFS_TYPES = [{ description: 'JoinFS recording', accept: { 'application/octet-stream': ['.jfs'] } }];
-const GPX_TYPES = [{ description: 'GPX track', accept: { 'application/gpx+xml': ['.gpx'] } }];
 
-/** Opens a file picker for .jfs/.gpx files; returns [{ file, handle }] (handle is null in the fallback path). */
-export async function pickFilesToOpen() {
+/**
+ * Opens a file picker for the given extensions (the formats registry's importable ones, e.g. ['.jfs', '.gpx']);
+ * returns [{ file, handle }] (handle is null in the fallback path).
+ */
+export async function pickFilesToOpen(extensions = ['.jfs', '.gpx']) {
   if (hasFileSystemAccess) {
     const handles = await window.showOpenFilePicker({
       multiple: true,
-      types: [...JFS_TYPES, ...GPX_TYPES],
+      types: [{ description: 'Recordings and tracks', accept: { 'application/octet-stream': extensions } }],
       excludeAcceptAllOption: false,
     });
     const out = [];
@@ -21,7 +23,7 @@ export async function pickFilesToOpen() {
   return new Promise((resolve) => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.jfs,.gpx';
+    input.accept = extensions.join(',');
     input.multiple = true;
     input.addEventListener('change', () => {
       resolve(Array.from(input.files || []).map((file) => ({ file, handle: null })));

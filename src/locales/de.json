@@ -8,7 +8,6 @@
   "toolbar.appTheme.auto": "Automatisch",
   "toolbar.appTheme.light": "Hell",
   "toolbar.appTheme.dark": "Dunkel",
-  "toolbar.clearSelection": "Auswahl aufheben",
   "toolbar.noTracks": "Noch keine Tracks geladen — .jfs- oder .gpx-Datei hierher ziehen oder Importieren verwenden.",
   "toolbar.dropHint": ".jfs- oder .gpx-Dateien zum Hinzufügen hier ablegen",
   "warnings.dismiss": "Schließen",
@@ -17,5 +16,18 @@
   "timeline.altitude": "Höhe",
   "timeline.speed": "Geschwindigkeit",
   "timeline.play": "Abspielen",
-  "timeline.pause": "Pause"
+  "timeline.pause": "Pause",
+  "format.loss.staticCg": "Diese Datei nutzt das ältere Aufzeichnungslayout. Beim Speichern wird das aktuelle JoinFS-Layout geschrieben, das die statische Schwerpunkthöhe nicht speichert.",
+  "plugins.failed": "Das Plugin „{name}“ ist fehlgeschlagen und wurde ausgeschaltet.",
+  "toolbar.undo": "Rückgängig",
+  "toolbar.redo": "Wiederholen",
+  "timeline.playPause": "Wiedergabe/Pause (Leertaste)",
+  "timeline.zoomOut": "Verkleinern",
+  "timeline.zoomIn": "Vergrößern",
+  "timeline.zoomHint": "Mausrad: zoomen · Strg+Mausrad: verschieben · Umschalt+Mausrad: Zeilen scrollen",
+  "timeline.eventsTitle": "Marker für Fahrwerk, Klappen und Lichter",
+  "modal.gpxTitle": "GPX in JoinFS-Aufzeichnung umwandeln",
+  "modal.close": "Schließen",
+  "toolbar.trackMenuEmpty": "Keine Spur-Aktionen verfügbar",
+  "timeline.trackMenu": "Spur-Aktionen"
 }

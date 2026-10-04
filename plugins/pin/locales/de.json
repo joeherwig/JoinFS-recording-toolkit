@@ -1,0 +1,5 @@
+{
+  "action.toggle": "Spur anheften / lösen",
+  "toast.pinned": "{name} ist angeheftet und lässt sich zeitlich nicht verschieben.",
+  "toast.unpinned": "{name} ist nicht mehr angeheftet."
+}

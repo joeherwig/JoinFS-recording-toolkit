@@ -10,6 +10,7 @@
 
 import { buildLodPyramid, pickLodLevel, altColor, desaturate, horizontalSpeedKt, findFrameIndexAtTime } from '../geo.js';
 import { t } from '../i18n.js';
+import { showTrackMenu } from '../track-menu.js';
 
 const ROW_HEIGHT = 56;
 const RULER_HEIGHT = 24;
@@ -30,7 +31,7 @@ const STYLE = `
   .scroll-body { display: flex; }
   .sidebar { width: ${SIDEBAR_WIDTH}px; flex: none; border-right: 1px solid var(--border, #262b36); }
   .row { height: ${ROW_HEIGHT}px; box-sizing: border-box; display: flex; align-items: center; gap: 6px; padding: 0 6px; border-bottom: 1px solid var(--border, #1c2129); cursor: pointer; }
-  .row.selected { background: rgba(255,255,255,.06); }
+  .row.selected { background: color-mix(in srgb, var(--fg, #e2e8f0) 8%, transparent); }
   .row .swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
   .row .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .row .lane-toggle { font-size: 10px; padding: 1px 4px; border-radius: 3px; border: 1px solid var(--border, #262b36); background: transparent; color: inherit; cursor: pointer; opacity: .55; }
@@ -49,12 +50,13 @@ export class JfsTimeline extends HTMLElement {
     this._root.innerHTML = `
       <style>${STYLE}</style>
       <div class="transport">
-        <button id="playBtn" title="Play/Pause (Space)">▶</button>
+        <button id="playBtn" title="${t('timeline.playPause')}" aria-label="${t('timeline.playPause')}">▶</button>
         <select id="rateSel">
           ${[0.5, 1, 2, 5, 10, 25, 50].map((r) => `<option value="${r}" ${r === 1 ? 'selected' : ''}>${r}x</option>`).join('')}
         </select>
-        <button id="zoomOut">−</button>
-        <button id="zoomIn">+</button>
+        <button id="zoomOut" title="${t('timeline.zoomOut')}" aria-label="${t('timeline.zoomOut')}">−</button>
+        <button id="zoomIn" title="${t('timeline.zoomIn')}" aria-label="${t('timeline.zoomIn')}">+</button>
+        <button id="menuBtn" title="${t('timeline.trackMenu')}" aria-label="${t('timeline.trackMenu')}" aria-haspopup="menu" hidden>⋮</button>
         <span class="time-readout" id="timeReadout">0:00</span>
       </div>
       <div class="scroll-area" id="scrollArea">
@@ -64,7 +66,7 @@ export class JfsTimeline extends HTMLElement {
         </div>
         <div class="scroll-body">
           <div class="sidebar" id="rows"></div>
-          <div class="canvas-wrap" id="canvasWrap" title="Wheel: zoom · Ctrl+wheel: pan · Shift+wheel: scroll rows">
+          <div class="canvas-wrap" id="canvasWrap" title="${t('timeline.zoomHint')}">
             <canvas id="bg"></canvas>
             <canvas id="fx"></canvas>
             <div class="empty-hint" id="emptyHint">${t('toolbar.noTracks')}</div>
@@ -94,6 +96,13 @@ export class JfsTimeline extends HTMLElement {
     this._root.getElementById('playBtn').addEventListener('click', () => this._togglePlay());
     this._root.getElementById('rateSel').addEventListener('change', (e) => this._store && this._store.setPlaybackRate(parseFloat(e.target.value)));
     this._root.getElementById('zoomOut').addEventListener('click', () => this._zoomAround(this._canvasWrap.clientWidth / 2, 0.5));
+    this._menuBtn = this._root.getElementById('menuBtn');
+    this._menuBtn.addEventListener('click', () => {
+      const id = this._menuTargetId();
+      if (id && this._store) showTrackMenu({ store: this._store, trackId: id, anchor: this._menuBtn, restoreFocus: this._menuBtn });
+    });
+    // right click on a row (name column or chart) opens the same menu for that row's track
+    this._root.addEventListener('contextmenu', (e) => this._onContextMenu(e));
     this._root.getElementById('zoomIn').addEventListener('click', () => this._zoomAround(this._canvasWrap.clientWidth / 2, 2));
 
     this._canvasWrap.addEventListener('wheel', (e) => this._onWheel(e), { passive: false });
@@ -123,17 +132,21 @@ export class JfsTimeline extends HTMLElement {
   connectedCallback() {
     this._resizeObserver = new ResizeObserver(() => this._resizeAndDraw());
     this._resizeObserver.observe(this._scrollArea);
+    // canvas colours come from the theme tokens, so a theme switch (data-theme on <html>) redraws everything
+    this._themeObserver = new MutationObserver(() => this._scheduleDraw(false));
+    this._themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     this._resizeAndDraw();
   }
 
   disconnectedCallback() {
     if (this._resizeObserver) this._resizeObserver.disconnect();
+    if (this._themeObserver) this._themeObserver.disconnect();
     if (this._rafHandle) cancelAnimationFrame(this._rafHandle);
   }
 
   // ---- playback -------------------------------------------------------
 
-  /** Public entry point so app.js can trigger this from the global Space hotkey. */
+  /** Public entry point so joinfs-recorder-toolkit.js can trigger this from the global Space hotkey. */
   togglePlay() { this._togglePlay(); }
 
   _togglePlay() {
@@ -214,16 +227,18 @@ export class JfsTimeline extends HTMLElement {
     if (!this._store) return;
     const tracks = this._store.project.tracks;
     this._emptyHint.style.display = tracks.length === 0 ? 'flex' : 'none';
+    this._updateMenuButton();
     this._rowsEl.innerHTML = '';
     tracks.forEach((track) => {
       const row = document.createElement('div');
       row.className = 'row' + (this._store.selectedTrackId === track.id ? ' selected' : '');
+      row.dataset.trackId = track.id;
       row.innerHTML = `
         <span class="swatch" style="background:${track.color}"></span>
         <span class="name" title="${track.callsign || track.model}">${track.callsign || track.model || track.id}</span>
         <button class="lane-toggle ${track.showAltitude ? 'on' : ''}" data-lane="altitude">ALT</button>
         <button class="lane-toggle ${track.showSpeed ? 'on' : ''}" data-lane="speed">SPD</button>
-        <button class="lane-toggle ${track.showEvents ? 'on' : ''}" data-lane="events" title="Gear/flaps/light markers">EVT</button>
+        <button class="lane-toggle ${track.showEvents ? 'on' : ''}" data-lane="events" title="${t('timeline.eventsTitle')}">EVT</button>
         <button class="remove-btn" title="${t('timeline.remove')}">×</button>
       `;
       row.addEventListener('click', (e) => {
@@ -291,6 +306,35 @@ export class JfsTimeline extends HTMLElement {
     }
   }
 
+  /** The track the header menu button acts on: the selected one, or the only one loaded. */
+  _menuTargetId() {
+    if (!this._store) return null;
+    const { selectedTrackId, project } = this._store;
+    if (selectedTrackId) return selectedTrackId;
+    return project.tracks.length === 1 ? project.tracks[0].id : null;
+  }
+
+  _updateMenuButton() {
+    if (this._menuBtn) this._menuBtn.hidden = !this._menuTargetId();
+  }
+
+  _onContextMenu(e) {
+    if (!this._store) return;
+    const path = e.composedPath();
+    let trackId = null;
+    const rowEl = path.find((n) => n.classList && n.classList.contains('row'));
+    if (rowEl) trackId = rowEl.dataset.trackId;
+    else if (path.includes(this._fx)) {
+      const y = e.clientY - this._fx.getBoundingClientRect().top;
+      const tr = this._store.project.tracks[Math.floor(y / ROW_HEIGHT)];
+      trackId = tr && tr.id;
+    }
+    if (!trackId) return;
+    e.preventDefault();
+    this._store.selectTrack(trackId, { toggle: false });
+    showTrackMenu({ store: this._store, trackId, x: e.clientX, y: e.clientY });
+  }
+
   // ---- pointer input: ruler (scrub) vs. row body (drag-to-shift-time) -----
   // These now live on two different elements (#ruler is a separate, sticky element - see the class
   // header comment), so no more y-coordinate dispatching within one shared canvas.
@@ -315,7 +359,7 @@ export class JfsTimeline extends HTMLElement {
     const y = e.clientY - rect.top;
     const rowIndex = Math.floor(y / ROW_HEIGHT);
     const track = this._store.project.tracks[rowIndex];
-    if (!track) return;
+    if (!track || !this._store.canDrag(track)) return;
     this._startRowDrag(e, track.id, track.timeOffsetS);
   }
 
@@ -398,13 +442,21 @@ export class JfsTimeline extends HTMLElement {
     });
   }
 
+  /** The theme's text colour (--fg) with the given alpha, so canvas drawing follows the light and dark theme. */
+  _ink(alpha) {
+    const hex = (getComputedStyle(this).getPropertyValue('--fg') || '').trim();
+    const m = /^#([0-9a-f]{6})$/i.exec(hex);
+    const n = m ? parseInt(m[1], 16) : 0xe2e8f0;
+    return `rgba(${n >> 16}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+  }
+
   _drawRuler() {
     const ctx = this._ruler.getContext('2d');
     const w = this._ruler.clientWidth;
     ctx.clearRect(0, 0, w, RULER_HEIGHT);
-    ctx.fillStyle = 'rgba(255,255,255,.08)';
+    ctx.fillStyle = this._ink(0.08);
     ctx.fillRect(0, 0, w, RULER_HEIGHT);
-    ctx.fillStyle = 'rgba(255,255,255,.55)';
+    ctx.fillStyle = this._ink(0.6);
     ctx.font = '10px system-ui, sans-serif';
     const pps = this._pixelsPerSecond;
     const visibleStart = this._scrollTimeS;
@@ -434,7 +486,7 @@ export class JfsTimeline extends HTMLElement {
         ? this._drag.startOffsetS + (this._drag.previewDx || 0) / pps
         : track.timeOffsetS;
       this._drawRow(ctx, track, rowTop, visibleStart, visibleDuration, pps, dim, offset, w);
-      ctx.strokeStyle = 'rgba(255,255,255,.08)';
+      ctx.strokeStyle = this._ink(0.1);
       ctx.beginPath(); ctx.moveTo(0, rowTop + ROW_HEIGHT); ctx.lineTo(w, rowTop + ROW_HEIGHT); ctx.stroke();
     });
   }
@@ -456,6 +508,18 @@ export class JfsTimeline extends HTMLElement {
     const laneH = ROW_HEIGHT - 4;
     const baseColor = dim ? desaturate(track.color.startsWith('#') ? this._hexToHsl(track.color) : track.color) : track.color;
     const alpha = dim ? 0.35 : 0.9;
+
+    // only the part that will be saved is drawn (trim); the plugin layers below are not clipped
+    const range = this._store ? this._store.visibleRange(track, offsetOverride) : null;
+    ctx.save();
+    if (range) {
+      // an unbounded end (nothing trimmed there) is clipped at the canvas edge: rect() ignores non-finite values
+      const cx0 = Math.max(-1, (range.startS + offsetOverride - visibleStart) * pps);
+      const cx1 = Number.isFinite(range.endS) ? (range.endS + offsetOverride - visibleStart) * pps : canvasWidth + 1;
+      ctx.beginPath();
+      ctx.rect(cx0, rowTop, Math.max(0, cx1 - cx0), ROW_HEIGHT);
+      ctx.clip();
+    }
 
     if (track.showAltitude && level.times.length) {
       let altMin = Infinity, altMax = -Infinity;
@@ -502,7 +566,7 @@ export class JfsTimeline extends HTMLElement {
     // matching change for why (markers were invisible by default since nothing starts selected).
     if (track.showEvents && track.events && track.events.length) {
       ctx.globalAlpha = alpha;
-      ctx.fillStyle = '#f8fafc';
+      ctx.fillStyle = this._ink(0.95);
       for (const evt of track.events) {
         const x = (evt.timeS + offsetOverride - visibleStart) * pps;
         if (x < 0 || x > canvasWidth) continue;
@@ -511,6 +575,20 @@ export class JfsTimeline extends HTMLElement {
         ctx.closePath(); ctx.fill();
       }
       ctx.globalAlpha = 1;
+    }
+
+    ctx.restore();
+
+    // plugin layers (trim shading, pin marker, ...) draw on top of the row; a failing layer is skipped
+    if (this._store && this._store.timelineLayers.size) {
+      const toX = (trackTimeS) => (trackTimeS + offsetOverride - visibleStart) * pps;
+      for (const layer of this._store.timelineLayers) {
+        ctx.save();
+        try { layer.draw(ctx, { track, top: rowTop, height: ROW_HEIGHT, width: canvasWidth, toX }); } catch (err) {
+          console.warn('Timeline layer failed:', err);
+        }
+        ctx.restore();
+      }
     }
   }
 

@@ -1,0 +1,10 @@
+{
+  "id": "pin",
+  "name": "Pin track",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "activation": "onAction",
+  "contributes": {
+    "trackActions": [{ "id": "toggle", "label": "action.toggle", "icon": "icons/pin.svg" }]
+  }
+}

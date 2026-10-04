@@ -1,6 +1,6 @@
 {
-  "name": "joinfs-jfs-toolkit",
-  "version": "0.1.0",
+  "name": "joinfs-recording-toolkit",
+  "version": "1.0.0",
   "description": "Browser toolkit to visualize and edit JoinFS .jfs flight-recording files on a map and timeline.",
   "keywords": [
     "joinfs",
