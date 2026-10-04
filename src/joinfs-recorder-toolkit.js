@@ -93,6 +93,7 @@ async function startPlugins(store, toolbarEl) {
     t, addMessages,
     addDragGuard: (fn) => store.addDragGuard(fn),
     addTimelineLayer: (layer) => store.addTimelineLayer(layer),
+    requestRedraw: () => store.requestRedraw(),
     openModeBar: (spec) => toolbarEl.openModeBar(spec),
     getTime: () => store.currentTimeS,
     setTime: (seconds) => store.setCurrentTime(seconds),

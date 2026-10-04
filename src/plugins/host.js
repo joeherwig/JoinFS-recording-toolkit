@@ -21,7 +21,7 @@ export class PluginHost {
   /**
    * env: { baseUrl, locale, fetchJson(url), importModule(url), storage: {get(key), set(key, value)}, warn(message) }
    * services: { formats, shortcuts, getTracks(), exec(command), toast(message), t(key, params), addMessages(prefix, dict),
-   *   addDragGuard(fn), addTimelineLayer(layer), openModeBar(spec), getTime(), setTime(s), getSelectedId() }
+   *   addDragGuard(fn), addTimelineLayer(layer), requestRedraw(), openModeBar(spec), getTime(), setTime(s), getSelectedId() }
    */
   constructor(env, services) {
     this._env = env;
@@ -158,7 +158,8 @@ export class PluginHost {
   trackActions() {
     return this._trackActions
       .filter((a) => a.declared ? !this._trackActions.some((b) => b !== a && b.pluginId === a.pluginId && b.id === a.id && !b.declared) : true)
-      .map((a) => ({ ...a, text: this._services.t(`plugin.${a.pluginId}.${a.label || a.id}`) }));
+      .map((a) => ({ ...a, text: this._services.t(`plugin.${a.pluginId}.${a.label || a.id}`) }))
+      .sort((x, y) => x.text.localeCompare(y.text)); // stable menu order whichever plugin finished loading first
   }
 
   /** Runs every registered export transform (lowest `order` first) over the tracks about to be saved. */
@@ -212,6 +213,7 @@ export class PluginHost {
       }),
       ui: Object.freeze({
         toast: (message) => s.toast(message),
+        requestRedraw: () => s.requestRedraw(),
         registerTimelineLayer: (layer) => own(s.addTimelineLayer({ draw: guard(layer.draw) })),
         /** Non-modal bar with number fields and buttons; returns { setValues(values), close() }. */
         openModeBar: (spec) => {

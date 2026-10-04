@@ -1,0 +1,14 @@
+{
+  "action.edit": "Trim track…",
+  "bar.title": "Trim: {name}",
+  "field.start": "Start (s)",
+  "field.end": "End (s)",
+  "button.startHere": "Start = playhead",
+  "button.endHere": "End = playhead",
+  "button.reset": "Reset",
+  "button.cancel": "Cancel",
+  "button.apply": "Apply",
+  "toast.applied": "Trim set from {from} s to {to} s. The cut parts are removed when saving.",
+  "toast.cleared": "Trim removed.",
+  "toast.invalid": "The start must be before the end."
+}

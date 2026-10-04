@@ -1,0 +1,11 @@
+{
+  "id": "trim",
+  "name": "Trim track",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "activation": "onAction",
+  "contributes": {
+    "trackActions": [{ "id": "edit", "label": "action.edit" }],
+    "exportTransforms": [{ "id": "apply" }]
+  }
+}

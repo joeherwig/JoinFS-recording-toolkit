@@ -16,6 +16,7 @@ export async function loadPlugin(id, { tracks = [], locale = 'en', storage = {} 
   const layers = new Set();
   const modeBars = [];
   const messages = {};
+  const redraws = { count: 0 };
   const state = { time: 0, selected: tracks[0] ? tracks[0].id : null };
   const history = new History();
   const env = {
@@ -35,6 +36,7 @@ export async function loadPlugin(id, { tracks = [], locale = 'en', storage = {} 
     addMessages: (prefix, dict) => { for (const [k, v] of Object.entries(dict)) messages[prefix + k] = v; },
     addDragGuard: (fn) => { guards.add(fn); return () => guards.delete(fn); },
     addTimelineLayer: (layer) => { layers.add(layer); return () => layers.delete(layer); },
+    requestRedraw: () => { redraws.count++; },
     openModeBar: (spec) => {
       const bar = { spec, closed: false, values: {}, setValues(v) { Object.assign(this.values, v); }, close() { this.closed = true; } };
       for (const f of spec.fields || []) bar.values[f.id] = f.value;
@@ -48,7 +50,7 @@ export async function loadPlugin(id, { tracks = [], locale = 'en', storage = {} 
   const host = new PluginHost(env, services);
   await host.loadAll([id]);
   return {
-    host, history, warnings, toasts, guards, layers, modeBars, state, messages, tracks,
+    host, history, redraws, warnings, toasts, guards, layers, modeBars, state, messages, tracks,
     canDrag: (track) => [...guards].every((g) => g(track) !== false),
     lastModeBar: () => modeBars[modeBars.length - 1],
     status: () => host.status().find((p) => p.id === id),
