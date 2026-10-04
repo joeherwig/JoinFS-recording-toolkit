@@ -302,6 +302,16 @@ export class JfsToolbar extends HTMLElement {
     dlg.append(head, body);
     closeBtn.addEventListener('click', () => spec.onButton && spec.onButton('cancel', values()));
     dlg.oncancel = (e) => { e.preventDefault(); if (spec.onButton) spec.onButton('cancel', values()); };
+    // Esc cancels without saving wherever the focus is (a non-modal dialog gets no native cancel from the page).
+    // Capture phase + stopPropagation so it does not also clear the map selection; an open track menu closes first.
+    this._onEsc = (e) => {
+      if (e.key !== 'Escape' || e.defaultPrevented || e.isComposing) return;
+      if (document.querySelector('.jfs-track-menu')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (spec.onButton) spec.onButton('cancel', values());
+    };
+    document.addEventListener('keydown', this._onEsc, true);
     refresh();
     dlg.show();
     this._centerOverMap(dlg);
@@ -311,7 +321,7 @@ export class JfsToolbar extends HTMLElement {
     if (first) first.el.focus();
     const handle = {
       setValues: (v) => { for (const [id, a] of inputs) if (v[id] !== undefined) a.set(v[id]); refresh(); },
-      close: () => { if (this._dialogHandle !== handle) return; this._dialogHandle = null; window.removeEventListener('resize', this._onResize); dlg.close(); dlg.replaceChildren(); },
+      close: () => { if (this._dialogHandle !== handle) return; this._dialogHandle = null; window.removeEventListener('resize', this._onResize); document.removeEventListener('keydown', this._onEsc, true); dlg.close(); dlg.replaceChildren(); },
     };
     this._dialogHandle = handle;
     return handle;
