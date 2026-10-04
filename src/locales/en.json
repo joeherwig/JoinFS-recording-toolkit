@@ -21,5 +21,12 @@
   "format.loss.staticCg": "This file uses the older recording layout. Saving writes the current JoinFS layout, which does not store the static CG height.",
   "plugins.failed": "Plugin \"{name}\" failed and was turned off.",
   "toolbar.undo": "Undo",
-  "toolbar.redo": "Redo"
+  "toolbar.redo": "Redo",
+  "timeline.playPause": "Play/Pause (Space)",
+  "timeline.zoomOut": "Zoom out",
+  "timeline.zoomIn": "Zoom in",
+  "timeline.zoomHint": "Wheel: zoom · Ctrl+wheel: pan · Shift+wheel: scroll rows",
+  "timeline.eventsTitle": "Gear/flaps/light markers",
+  "modal.gpxTitle": "Convert GPX to JoinFS recording",
+  "modal.close": "Close"
 }

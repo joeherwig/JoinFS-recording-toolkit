@@ -49,12 +49,12 @@ export class JfsTimeline extends HTMLElement {
     this._root.innerHTML = `
       <style>${STYLE}</style>
       <div class="transport">
-        <button id="playBtn" title="Play/Pause (Space)">▶</button>
+        <button id="playBtn" title="${t('timeline.playPause')}" aria-label="${t('timeline.playPause')}">▶</button>
         <select id="rateSel">
           ${[0.5, 1, 2, 5, 10, 25, 50].map((r) => `<option value="${r}" ${r === 1 ? 'selected' : ''}>${r}x</option>`).join('')}
         </select>
-        <button id="zoomOut">−</button>
-        <button id="zoomIn">+</button>
+        <button id="zoomOut" title="${t('timeline.zoomOut')}" aria-label="${t('timeline.zoomOut')}">−</button>
+        <button id="zoomIn" title="${t('timeline.zoomIn')}" aria-label="${t('timeline.zoomIn')}">+</button>
         <span class="time-readout" id="timeReadout">0:00</span>
       </div>
       <div class="scroll-area" id="scrollArea">
@@ -64,7 +64,7 @@ export class JfsTimeline extends HTMLElement {
         </div>
         <div class="scroll-body">
           <div class="sidebar" id="rows"></div>
-          <div class="canvas-wrap" id="canvasWrap" title="Wheel: zoom · Ctrl+wheel: pan · Shift+wheel: scroll rows">
+          <div class="canvas-wrap" id="canvasWrap" title="${t('timeline.zoomHint')}">
             <canvas id="bg"></canvas>
             <canvas id="fx"></canvas>
             <div class="empty-hint" id="emptyHint">${t('toolbar.noTracks')}</div>
@@ -223,7 +223,7 @@ export class JfsTimeline extends HTMLElement {
         <span class="name" title="${track.callsign || track.model}">${track.callsign || track.model || track.id}</span>
         <button class="lane-toggle ${track.showAltitude ? 'on' : ''}" data-lane="altitude">ALT</button>
         <button class="lane-toggle ${track.showSpeed ? 'on' : ''}" data-lane="speed">SPD</button>
-        <button class="lane-toggle ${track.showEvents ? 'on' : ''}" data-lane="events" title="Gear/flaps/light markers">EVT</button>
+        <button class="lane-toggle ${track.showEvents ? 'on' : ''}" data-lane="events" title="${t('timeline.eventsTitle')}">EVT</button>
         <button class="remove-btn" title="${t('timeline.remove')}">×</button>
       `;
       row.addEventListener('click', (e) => {
