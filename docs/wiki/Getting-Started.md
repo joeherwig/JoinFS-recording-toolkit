@@ -14,6 +14,11 @@ tiny server and the tests (`npm test`).
 
 ## Open recordings
 
+> [!TIP]
+> **Drag several files at once.** Select multiple `.jfs` and `.gpx` files in your file manager and drop them
+> together onto the map or the timeline: they are all imported in one go (the Import button and Ctrl+O also allow
+> selecting several files). Files of other types in the same drop are ignored.
+
 Three ways, all equivalent:
 
 - drag one or more files onto the map or the timeline,
@@ -25,7 +30,7 @@ still treated as GPX.
 
 - A `.jfs` file adds one track per recorded aircraft.
 - A `.gpx` file opens the converter dialog where you choose aircraft type, callsign and so on; its result is added as
-  a track. See [Saving and Formats](Saving-and-Formats).
+  a track. With several GPX files in one drop, the dialog opens for each of them in turn. See [Saving and Formats](Saving-and-Formats).
 
 If something looks off (an older file layout, an ambiguous tail), a notice appears in the top right corner and
 disappears by itself after a while.

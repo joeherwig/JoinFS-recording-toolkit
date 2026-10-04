@@ -6,6 +6,10 @@ track, and save everything as one `.jfs` that JoinFS replays.
 
 No installation and no build step: it is plain HTML and JavaScript. Your files never leave your computer.
 
+> [!TIP]
+> **Drag and drop:** drag one or **several** `.jfs` and `.gpx` files (even mixed) from your file manager onto the map
+> or the timeline, and they are all imported at once. Each recorded aircraft becomes its own track.
+
 ## Where to start
 
 | I want to... | Read |

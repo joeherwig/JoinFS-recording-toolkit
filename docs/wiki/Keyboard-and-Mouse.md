@@ -33,6 +33,7 @@ ends.
 
 | Gesture | Where | Action |
 |---|---|---|
+| drop one or several files | map, timeline | import all of them (`.jfs`, `.gpx`) |
 | click | path, arrow, legend entry, timeline row | select the track |
 | click | empty map | clear selection |
 | right-click | timeline row | track actions menu |
