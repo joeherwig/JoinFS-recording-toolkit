@@ -36,10 +36,12 @@ deals in degrees - see `DEG2RAD`/`RAD2DEG` in `src/jfs-codec.js`.
 - **Position, attitude (pitch/bank/heading), horizontal+vertical velocity, elevation, on-ground
   flag**: fully decoded and re-encoded. **Static CG-to-ground** is decoded from `legacy-staticcg` files but
   never written (see above).
-- **Control surfaces (rudder/elevator/aileron/brakes) and angular velocity/acceleration**: read but
-  discarded - not part of this toolkit's `Track` data model (see `PLAN.md` Step 2), so they're
-  always written back as zero. A JoinFS playback of a saved file will show centered control surfaces
-  regardless of what the original recording had.
+- **Control surfaces (rudder/elevator/aileron/brakes) and angular velocity/acceleration**: kept as raw
+  columns (`frames.ctl`, `frames.kin`) and written back unchanged. They used to be discarded (written as
+  zero), which made JoinFS replay a saved file with frozen attitude between its periodic updates, because
+  JoinFS integrates the angular velocity between them. The full ground-flags byte (bit 1 = sender had
+  elevation correction) is preserved as well. Only lat/lon/attitude pass through degrees, so a re-save can
+  differ from the original in float rounding of those fields.
 - **`SimEvent`/`IntegerVariables`/`FloatVariables`/`String8Variables` frames**: kept as opaque,
   byte-exact payloads (`opaquePayload`) and re-emitted unchanged except for their frame `time`
   (shifted the same way position frames are, on export). `IntegerVariables`/`FloatVariables` entries

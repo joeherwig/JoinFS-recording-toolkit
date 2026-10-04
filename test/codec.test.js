@@ -195,3 +195,25 @@ test('pre-21008 files never probe the static CG layout', () => {
   assert.equal(out.layout, LAYOUT.CURRENT);
   assert.equal(out.version, 21007);
 });
+
+test('angular velocity, acceleration, controls and the full flags byte survive a round trip', () => {
+  const track = buildSyntheticTrack({ frameCount: 8 });
+  track.frames.kin = new Float32Array(8 * 6).map((_, i) => 0.25 * (i + 1));
+  track.frames.ctl = new Int16Array(8 * 5).map((_, i) => (i * 1000) - 8000);
+  track.frames.groundFlags = new Uint8Array(8).fill(3); // on ground + elevation correction
+  for (const layout of [LAYOUT.CURRENT, LAYOUT.LEGACY_STATIC_CG]) {
+    const out = decodeJfsFile(encodeJfsFile([track], { buildVariant: 'other', layout }).buffer).tracks[0];
+    assert.deepEqual(Array.from(out.frames.kin), Array.from(track.frames.kin), `${layout} kin`);
+    assert.deepEqual(Array.from(out.frames.ctl), Array.from(track.frames.ctl), `${layout} ctl`);
+    assert.deepEqual(Array.from(out.frames.groundFlags), Array.from(track.frames.groundFlags), `${layout} flags`);
+  }
+});
+
+test('decode -> encode reaches a fixed point after one pass (only the degrees/radians float rounding differs)', () => {
+  const track = buildSyntheticTrack({ frameCount: 30 });
+  track.frames.kin = new Float32Array(30 * 6).map((_, i) => Math.fround(Math.sin(i)));
+  track.frames.ctl = new Int16Array(30 * 5).map((_, i) => (i * 37) % 16384);
+  const once = encodeJfsFile(decodeJfsFile(encodeJfsFile([track], { buildVariant: 'fs2024' }).buffer).tracks, { buildVariant: 'fs2024' });
+  const twice = encodeJfsFile(decodeJfsFile(once.buffer).tracks, { buildVariant: 'fs2024' });
+  assert.equal(Buffer.compare(Buffer.from(once), Buffer.from(twice)), 0);
+});

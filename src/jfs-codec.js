@@ -112,8 +112,13 @@ function decodeAircraftPositionFrame(dv, pos, version, hasStaticCg) {
   const vX = dv.getFloat32(pos, true); pos += 4;
   const vY = dv.getFloat32(pos, true); pos += 4;
   const vZ = dv.getFloat32(pos, true); pos += 4;
-  pos += 24; // angular velocity + acceleration - not modeled by this app
-  pos += 10; // rudder/elevator/aileron/brakeL/brakeR - not modeled by this app
+  // angular velocity + acceleration (6 floats) and rudder/elevator/aileron/brakeL/brakeR (5 raw int16) are not
+  // shown by the app but are kept, so a saved file replays exactly like the original: JoinFS integrates the
+  // angular velocity to advance the attitude between its periodic updates.
+  const kin = [];
+  for (let i = 0; i < 6; i++) { kin.push(dv.getFloat32(pos, true)); pos += 4; }
+  const ctl = [];
+  for (let i = 0; i < 5; i++) { ctl.push(dv.getInt16(pos, true)); pos += 2; }
   let elevation = 0, groundFlags = 0, staticCgToGround = NaN;
   if (version >= 10023) {
     elevation = dv.getFloat32(pos, true); pos += 4;
@@ -122,7 +127,7 @@ function decodeAircraftPositionFrame(dv, pos, version, hasStaticCg) {
   if (hasStaticCg) {
     staticCgToGround = dv.getFloat32(pos, true); pos += 4;
   }
-  return { lat, lon, alt, pitch, bank, heading, vX, vY, vZ, elevation, groundFlags, staticCgToGround, next: pos };
+  return { lat, lon, alt, pitch, bank, heading, vX, vY, vZ, kin, ctl, elevation, groundFlags, staticCgToGround, next: pos };
 }
 
 // ObjectPositionFrame payload: same lat/lon/alt/pitch/bank/heading/velocity, but no controls and no
@@ -139,13 +144,14 @@ function decodeObjectPositionFrame(dv, pos, version) {
   const vX = dv.getFloat32(pos, true); pos += 4;
   const vY = dv.getFloat32(pos, true); pos += 4;
   const vZ = dv.getFloat32(pos, true); pos += 4;
-  pos += 24; // angular velocity + acceleration
+  const kin = [];
+  for (let i = 0; i < 6; i++) { kin.push(dv.getFloat32(pos, true)); pos += 4; } // angular velocity + acceleration
   let elevation = 0, groundFlags = 0;
   if (version >= 10023) {
     elevation = dv.getFloat32(pos, true); pos += 4;
     groundFlags = dv.getUint8(pos); pos += 1;
   }
-  return { lat, lon, alt, pitch, bank, heading, vX, vY, vZ, elevation, groundFlags, staticCgToGround: NaN, next: pos };
+  return { lat, lon, alt, pitch, bank, heading, vX, vY, vZ, kin, ctl: null, elevation, groundFlags, staticCgToGround: NaN, next: pos };
 }
 
 function encodeAircraftPositionFrame(dv, u8, pos, f, withStaticCg) {
@@ -158,10 +164,10 @@ function encodeAircraftPositionFrame(dv, u8, pos, f, withStaticCg) {
   dv.setFloat32(pos, f.vX, true); pos += 4;
   dv.setFloat32(pos, f.vY, true); pos += 4;
   dv.setFloat32(pos, f.vZ, true); pos += 4;
-  for (let i = 0; i < 6; i++) { dv.setFloat32(pos, 0, true); pos += 4; } // angular velocity + acceleration
-  for (let i = 0; i < 5; i++) { dv.setInt16(pos, 0, true); pos += 2; } // controls
+  for (let i = 0; i < 6; i++) { dv.setFloat32(pos, f.kin ? f.kin[i] : 0, true); pos += 4; } // angular velocity + acceleration
+  for (let i = 0; i < 5; i++) { dv.setInt16(pos, f.ctl ? f.ctl[i] : 0, true); pos += 2; } // rudder, elevator, aileron, brakeL, brakeR
   dv.setFloat32(pos, f.elevation || 0, true); pos += 4;
-  dv.setUint8(pos, f.groundFlags & 1); pos += 1;
+  dv.setUint8(pos, f.groundFlags & 0xff); pos += 1; // bit 0 on ground, bit 1 sender had elevation correction
   // The current JoinFS layout has no staticCgToGround field; only the legacy-staticcg layout (kept for
   // tests and for talking to 26.6-beta builds) appends it. NaN if unknown, same convention as the network message.
   if (withStaticCg) { dv.setFloat32(pos, f.staticCgToGround, true); pos += 4; }
@@ -340,6 +346,8 @@ function parseJfs(arrayBuffer, version, layout, { sourceFileName, onProgress, st
     const elevation = new Float32Array(frameCount);
     const staticCgToGround = new Float32Array(frameCount);
     const groundFlags = new Uint8Array(frameCount);
+    const kin = new Float32Array(frameCount * 6); // angVelXYZ, accXYZ per frame
+    const ctl = new Int16Array(frameCount * 5);   // rudder, elevator, aileron, brakeL, brakeR (raw, value * 16384)
     const opaquePayload = new Array(frameCount).fill(null);
     const events = [];
     // The recorder writes a variable's current value periodically, not only when it changes (real
@@ -365,6 +373,8 @@ function parseJfs(arrayBuffer, version, layout, { sourceFileName, onProgress, st
         pitch[i] = f.pitch; bank[i] = f.bank; heading[i] = f.heading;
         vX[i] = f.vX; vY[i] = f.vY; vZ[i] = f.vZ;
         elevation[i] = f.elevation; groundFlags[i] = f.groundFlags; staticCgToGround[i] = f.staticCgToGround;
+        for (let k = 0; k < 6; k++) kin[i * 6 + k] = f.kin[k];
+        if (f.ctl) for (let k = 0; k < 5; k++) ctl[i * 5 + k] = f.ctl[k];
         p = f.next;
       } else if (type === FRAME_TYPE.SIM_EVENT) {
         opaquePayload[i] = u8.slice(p, p + 8);
@@ -404,7 +414,7 @@ function parseJfs(arrayBuffer, version, layout, { sourceFileName, onProgress, st
       icaoType: tail.icaoType, icaoAirline: tail.icaoAirline, livery: tail.livery,
       detectedBuildVariant: tail.detectedBuildVariant, sourceVersion: version, sourceLayout: layout,
       timeOffsetS: 0, visible: true, showAltitude: true, showSpeed: true, showEvents: true,
-      frames: { times, types, lat, lon, alt, pitch, bank, heading, vX, vY, vZ, elevation, staticCgToGround, groundFlags, opaquePayload },
+      frames: { times, types, lat, lon, alt, pitch, bank, heading, vX, vY, vZ, kin, ctl, elevation, staticCgToGround, groundFlags, opaquePayload },
       events,
     });
   }
@@ -494,6 +504,8 @@ export function encodeJfsFile(tracks, { buildVariant = 'fs2024', layout = LAYOUT
           vX: track.frames.vX[i], vY: track.frames.vY[i], vZ: track.frames.vZ[i],
           elevation: track.frames.elevation[i], groundFlags: track.frames.groundFlags[i],
           staticCgToGround: track.frames.staticCgToGround[i],
+          kin: track.frames.kin ? track.frames.kin.subarray(i * 6, i * 6 + 6) : null,
+          ctl: track.frames.ctl ? track.frames.ctl.subarray(i * 5, i * 5 + 5) : null,
         }, withStaticCg);
       } else {
         dv.setUint8(p, type); p += 1;
