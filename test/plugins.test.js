@@ -15,8 +15,11 @@ function setup(files, stored = {}) {
   const storage = { data: { ...stored }, get(k) { return this.data[k] ?? null; }, set(k, v) { this.data[k] = v; } };
   const env = {
     baseUrl: BASE,
+    locale: 'en',
     fetchJson: async (url) => {
-      const f = files[url.slice(BASE.length)];
+      const key = url.slice(BASE.length);
+      const f = files[key];
+      if (f === undefined && key.endsWith("/locales/en.json")) return {}; // locales default to empty
       if (f === undefined) throw new Error('404');
       if (f instanceof Error) throw f;
       return f;

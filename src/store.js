@@ -18,7 +18,16 @@ export class Store extends EventTarget {
     this.mapTileTheme = 'dark';
     this.appTheme = 'auto';
     this.locale = 'en';
-    this.history = new History({ onChange: () => this._emit('history-changed', { canUndo: this.history.canUndo, canRedo: this.history.canRedo }) });
+    // Plugin contributions (PLAN-v2.md §3.5): drag vetoes and timeline layers are registered through the plugin host
+    this.dragGuards = new Set();
+    this.timelineLayers = new Set();
+    this.history = new History({
+      onChange: () => {
+        this._emit('history-changed', { canUndo: this.history.canUndo, canRedo: this.history.canRedo });
+        // a command may have changed anything (plugin data included), so views redraw
+        this._emit('tracks-changed', { tracks: this.project.tracks });
+      },
+    });
   }
 
   _emit(name, detail) {
@@ -26,6 +35,7 @@ export class Store extends EventTarget {
   }
 
   addTracks(tracks) {
+    for (const t of tracks) if (!t.ext) t.ext = {}; // plugin-owned data, kept while the plugin is off
     this.project.tracks.push(...tracks);
     this._emit('tracks-changed', { tracks: this.project.tracks });
   }
@@ -35,9 +45,28 @@ export class Store extends EventTarget {
   undo() { return this.history.undo(); }
   redo() { return this.history.redo(); }
 
+  /** False when any plugin vetoes moving this track (e.g. pin). */
+  canDrag(track) {
+    for (const guard of this.dragGuards) {
+      try { if (guard(track) === false) return false; } catch (err) { console.warn('Drag guard failed:', err); }
+    }
+    return true;
+  }
+
+  addDragGuard(guard) { this.dragGuards.add(guard); return () => this.dragGuards.delete(guard); }
+
+  addTimelineLayer(layer) {
+    this.timelineLayers.add(layer);
+    this.requestRedraw();
+    return () => { this.timelineLayers.delete(layer); this.requestRedraw(); };
+  }
+
+  /** Asks the views to redraw (a plugin's draft changed). */
+  requestRedraw() { this._emit('tracks-changed', { tracks: this.project.tracks }); }
+
   setTrackOffset(trackId, offsetS) {
     const track = this.project.tracks.find((t) => t.id === trackId);
-    if (!track || track.timeOffsetS === offsetS) return;
+    if (!track || track.timeOffsetS === offsetS || !this.canDrag(track)) return;
     const before = track.timeOffsetS;
     const apply = (value) => {
       setTrackOffset(this.project, trackId, value);

@@ -8,7 +8,6 @@
   "toolbar.appTheme.auto": "Auto",
   "toolbar.appTheme.light": "Light",
   "toolbar.appTheme.dark": "Dark",
-  "toolbar.clearSelection": "Clear selection",
   "toolbar.noTracks": "No tracks loaded yet — drag a .jfs or .gpx file here, or use Import.",
   "toolbar.dropHint": "Drop .jfs or .gpx files to add them",
   "warnings.dismiss": "Dismiss",
@@ -28,5 +27,7 @@
   "timeline.zoomHint": "Wheel: zoom · Ctrl+wheel: pan · Shift+wheel: scroll rows",
   "timeline.eventsTitle": "Gear/flaps/light markers",
   "modal.gpxTitle": "Convert GPX to JoinFS recording",
-  "modal.close": "Close"
+  "modal.close": "Close",
+  "toolbar.trackMenu": "Track",
+  "toolbar.trackMenuEmpty": "No track actions available"
 }

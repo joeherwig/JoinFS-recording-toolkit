@@ -19,8 +19,9 @@ export function validateManifest(m, expectedId) {
 
 export class PluginHost {
   /**
-   * env: { baseUrl, fetchJson(url), importModule(url), storage: {get(key), set(key, value)}, warn(message) }
-   * services: { formats, shortcuts, getTracks(), exec(command), toast(message), t(key, params) }
+   * env: { baseUrl, locale, fetchJson(url), importModule(url), storage: {get(key), set(key, value)}, warn(message) }
+   * services: { formats, shortcuts, getTracks(), exec(command), toast(message), t(key, params), addMessages(prefix, dict),
+   *   addDragGuard(fn), addTimelineLayer(layer), openModeBar(spec), getTime(), setTime(s), getSelectedId() }
    */
   constructor(env, services) {
     this._env = env;
@@ -49,6 +50,7 @@ export class PluginHost {
     }
     const problems = validateManifest(entry.manifest, id);
     if (problems.length) return this._fail(entry, problems.join('; '));
+    await this._loadLocales(entry);
     const defaultEnabled = entry.manifest.defaultEnabled !== false;
     const stored = this._readEnabled(id);
     entry.enabled = stored === null ? defaultEnabled : stored;
@@ -56,6 +58,20 @@ export class PluginHost {
     if (entry.enabled) this._declare(entry);
     if (entry.enabled && (entry.manifest.activation || 'onStartup') === 'onStartup') await this.activate(id);
     return entry;
+  }
+
+  /** Plugin strings live in plugins/<id>/locales/<lang>.json (English first, then the UI language on top). */
+  async _loadLocales(entry) {
+    const langs = ['en'];
+    if (this._env.locale && this._env.locale !== 'en') langs.push(this._env.locale);
+    const dict = {};
+    for (const lang of langs) {
+      const url = new URL(`${entry.id}/locales/${lang}.json`, this._env.baseUrl).href;
+      try { Object.assign(dict, await this._env.fetchJson(url)); } catch (err) {
+        this._env.warn(`Plugin "${entry.id}": locale ${url} not loaded (${err.message}); using English.`);
+      }
+    }
+    if (this._services.addMessages) this._services.addMessages(`plugin.${entry.id}.`, dict);
   }
 
   _fail(entry, reason) {
@@ -127,9 +143,23 @@ export class PluginHost {
     return true;
   }
 
+  /** Runs a menu action; activates its plugin first if needed. Resolves false if the plugin could not provide it. */
+  async runTrackAction(pluginId, actionId, trackId) {
+    if (!(await this.activate(pluginId))) return false;
+    const action = this._trackActions.find((a) => a.pluginId === pluginId && a.id === actionId && !a.declared);
+    if (!action) { this._env.warn(`Plugin "${pluginId}" registered no action "${actionId}".`); return false; }
+    action.run({ trackId });
+    return true;
+  }
+
   // ---- contributions (read by the UI) ------------------------------------------------------------------
 
-  trackActions() { return this._trackActions.map((a) => ({ ...a })); }
+  /** Menu entries: one per action id, live registrations replacing manifest placeholders; labels are translated. */
+  trackActions() {
+    return this._trackActions
+      .filter((a) => a.declared ? !this._trackActions.some((b) => b !== a && b.pluginId === a.pluginId && b.id === a.id && !b.declared) : true)
+      .map((a) => ({ ...a, text: this._services.t(`plugin.${a.pluginId}.${a.label || a.id}`) }));
+  }
 
   /** Runs every registered export transform (lowest `order` first) over the tracks about to be saved. */
   applyExportTransforms(tracks) {
@@ -161,10 +191,13 @@ export class PluginHost {
       id: entry.id,
       apiVersion: API_VERSION,
       tracks: Object.freeze({
+        registerDragGuard: (fn) => own(s.addDragGuard(guard(fn))),
         list: () => s.getTracks().map((t) => Object.freeze({ ...t })),
         get: (id) => { const t = s.getTracks().find((x) => x.id === id); return t ? Object.freeze({ ...t }) : null; },
       }),
       exec: (command) => s.exec(command),
+      time: Object.freeze({ get: () => s.getTime(), set: (seconds) => s.setTime(seconds) }),
+      selection: Object.freeze({ get: () => s.getSelectedId() }),
       i18n: Object.freeze({ t: (key, params) => s.t(`plugin.${entry.id}.${key}`, params) }),
       shortcuts: Object.freeze({
         register: (spec) => own(s.shortcuts.register({ ...spec, id: `${entry.id}:${spec.id}`, run: guard(spec.run) })),
@@ -179,6 +212,13 @@ export class PluginHost {
       }),
       ui: Object.freeze({
         toast: (message) => s.toast(message),
+        registerTimelineLayer: (layer) => own(s.addTimelineLayer({ draw: guard(layer.draw) })),
+        /** Non-modal bar with number fields and buttons; returns { setValues(values), close() }. */
+        openModeBar: (spec) => {
+          const bar = s.openModeBar({ ...spec, onChange: guard(spec.onChange || (() => {})), onButton: guard(spec.onButton || (() => {})) });
+          own(() => bar.close());
+          return bar;
+        },
         registerTrackAction: (spec) => {
           // replaces the manifest-declared placeholder with the live action
           this._trackActions = this._trackActions.filter((a) => !(a.pluginId === entry.id && a.id === spec.id));

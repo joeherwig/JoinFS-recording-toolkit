@@ -8,7 +8,6 @@
   "toolbar.appTheme.auto": "Automatisch",
   "toolbar.appTheme.light": "Hell",
   "toolbar.appTheme.dark": "Dunkel",
-  "toolbar.clearSelection": "Auswahl aufheben",
   "toolbar.noTracks": "Noch keine Tracks geladen — .jfs- oder .gpx-Datei hierher ziehen oder Importieren verwenden.",
   "toolbar.dropHint": ".jfs- oder .gpx-Dateien zum Hinzufügen hier ablegen",
   "warnings.dismiss": "Schließen",
@@ -28,5 +27,7 @@
   "timeline.zoomHint": "Mausrad: zoomen · Strg+Mausrad: verschieben · Umschalt+Mausrad: Zeilen scrollen",
   "timeline.eventsTitle": "Marker für Fahrwerk, Klappen und Lichter",
   "modal.gpxTitle": "GPX in JoinFS-Aufzeichnung umwandeln",
-  "modal.close": "Schließen"
+  "modal.close": "Schließen",
+  "toolbar.trackMenu": "Spur",
+  "toolbar.trackMenuEmpty": "Keine Spur-Aktionen verfügbar"
 }

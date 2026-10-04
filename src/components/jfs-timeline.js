@@ -315,7 +315,7 @@ export class JfsTimeline extends HTMLElement {
     const y = e.clientY - rect.top;
     const rowIndex = Math.floor(y / ROW_HEIGHT);
     const track = this._store.project.tracks[rowIndex];
-    if (!track) return;
+    if (!track || !this._store.canDrag(track)) return;
     this._startRowDrag(e, track.id, track.timeOffsetS);
   }
 
@@ -511,6 +511,18 @@ export class JfsTimeline extends HTMLElement {
         ctx.closePath(); ctx.fill();
       }
       ctx.globalAlpha = 1;
+    }
+
+    // plugin layers (trim shading, pin marker, ...) draw on top of the row; a failing layer is skipped
+    if (this._store && this._store.timelineLayers.size) {
+      const toX = (trackTimeS) => (trackTimeS + offsetOverride - visibleStart) * pps;
+      for (const layer of this._store.timelineLayers) {
+        ctx.save();
+        try { layer.draw(ctx, { track, top: rowTop, height: ROW_HEIGHT, width: canvasWidth, toX }); } catch (err) {
+          console.warn('Timeline layer failed:', err);
+        }
+        ctx.restore();
+      }
     }
   }
 

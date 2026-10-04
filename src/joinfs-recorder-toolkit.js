@@ -3,7 +3,7 @@
 
 import { Store } from './store.js';
 import { initTheme, setTheme, getStoredTheme } from './theme.js';
-import { setLocale, resolveLocaleFromUrl } from './i18n.js';
+import { setLocale, resolveLocaleFromUrl, getLocale, addMessages } from './i18n.js';
 import { shortcuts } from './shortcuts.js';
 import { formats } from './formats/index.js';
 import { PluginHost } from './plugins/host.js';
@@ -73,6 +73,7 @@ async function startPlugins(store, toolbarEl) {
   const baseUrl = new URL('../plugins/', import.meta.url).href;
   const host = new PluginHost({
     baseUrl,
+    locale: getLocale(),
     fetchJson: async (url) => {
       const r = await fetch(url);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -89,7 +90,13 @@ async function startPlugins(store, toolbarEl) {
     getTracks: () => store.project.tracks,
     exec: (command) => store.exec(command),
     toast: (message) => toolbarEl.notify(message),
-    t,
+    t, addMessages,
+    addDragGuard: (fn) => store.addDragGuard(fn),
+    addTimelineLayer: (layer) => store.addTimelineLayer(layer),
+    openModeBar: (spec) => toolbarEl.openModeBar(spec),
+    getTime: () => store.currentTimeS,
+    setTime: (seconds) => store.setCurrentTime(seconds),
+    getSelectedId: () => store.selectedTrackId,
   });
   toolbarEl.plugins = host;
   window.jfsToolkit = { store, formats, plugins: host };
