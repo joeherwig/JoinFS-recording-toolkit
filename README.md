@@ -1,4 +1,4 @@
-# joinfs-jfs-toolkit
+# JoinFS-recording-toolkit
 
 A browser-based toolkit to **visualize** and **edit** [JoinFS](https://joinfs.net/) `.jfs` flight-recording files on a map and a video-editor-style timeline.
 

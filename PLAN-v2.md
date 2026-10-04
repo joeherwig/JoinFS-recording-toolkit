@@ -1,6 +1,6 @@
 # JoinFS-recording-toolkit — architecture, formats and implementation plan
 
-Repo: `joeherwig/joinfs-jfs-toolkit` is **renamed to `JoinFS-recording-toolkit`**; all work continues on a long-lived branch **`rework-architecture`**, where the plugin architecture comes first, before the remaining features and fixes. Saved after approval as `PLAN-v2.md` in the repo root (companion to `PLAN.md` v1, `REQUIREMENTS.md`). The GPX converter (`joinfs-gpx-to-jfs-webcomponent`) stays its own repo; its engine is consumed by this repo.
+Repo: renamed from `joinfs-jfs-toolkit` to **`JoinFS-recording-toolkit`** (done); all work continues on the long-lived branch **`rework-architecture`**, where the plugin architecture comes first, before the remaining features and fixes. Saved as `PLAN-v2.md` in the repo root (companion to `PLAN.md` v1, `REQUIREMENTS.md`). The GPX converter (`joinfs-gpx-to-jfs-webcomponent`) stays its own repo; its engine is consumed by this repo.
 
 ## 1. Goals
 1. Recordings written by the toolkit and the GPX converter load and replay in **current JoinFS** (upstream main / protocol-updated, #181).
@@ -75,7 +75,7 @@ Cause of "Space blocks typing in the GPX import": `app.js` checks `e.target.tagN
 
 ## 4. Implementation steps
 **Step A — Repo and branch (first)**
-1. Rename the GitHub repo `joinfs-jfs-toolkit` → `JoinFS-recording-toolkit` (`gh repo rename`, **only after your explicit go**, it is outward-facing), update `origin` locally, `package.json` name, README/PLAN/REQUIREMENTS titles and links, the converter's and map component's references. Rename of the local folder is left to you (it is my working directory).
+1. ~~Rename the GitHub repo `joinfs-jfs-toolkit` → `JoinFS-recording-toolkit`~~ (done); `origin`, `package.json` and the README title are updated. Remaining: references in the converter and map component repos.
 2. Create branch `rework-architecture`; all steps below are PRs into it. `main` keeps working until the branch is merged.
 **Step B — Architecture first (nothing else before this)**
 3. B1 neutral model + `formats-jfs-legacy` plugin shell around today's codec, no behavior change (existing tests green, byte-identical re-encode test), shim at `src/jfs-codec.js` for one release.

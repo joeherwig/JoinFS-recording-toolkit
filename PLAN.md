@@ -1,4 +1,4 @@
-# joinfs-jfs-toolkit — Implementation Plan
+# JoinFS-recording-toolkit (formerly joinfs-jfs-toolkit) — Implementation Plan
 
 ## Context
 
@@ -14,12 +14,12 @@ This plan was produced after:
 
 - `REQUIREMENTS.md` at repo root is the source of truth for functional/UI requirements — this plan doesn't duplicate it; see that file for Project/UI/Visualizing/Editing/Technical-decisions/`.jfs`-format-reference/Repo-conventions. (Status: done.)
 - `.gitignore` including `.claude/` (and standard `node_modules/`, `.DS_Store`, etc.) so local Claude Code settings/plan files never get committed. (Status: done.)
-- `package.json` (name `joinfs-jfs-toolkit`, no runtime deps), `README.md`, `.github/workflows/test.yml`. (Status: done.)
+- `package.json` (name `joinfs-recording-toolkit`, no runtime deps), `README.md`, `.github/workflows/test.yml`. (Status: done.)
 
 ## Step 1 — File/module layout
 
 ```
-joinfs-jfs-toolkit/
+JoinFS-recording-toolkit/
   index.html                      # app shell: <jfs-toolbar>, <jfs-map>, <jfs-timeline>, imports src/app.js as module
   src/
     app.js                        # wires store + components + toolbar; owns the rAF playback loop; page-level dragover/drop handlers routing dropped files into the same import path as the toolbar's [+] control; global Ctrl+S handler → save

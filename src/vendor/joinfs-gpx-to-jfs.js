@@ -1,6 +1,6 @@
 /*
  * VENDORED, UNMODIFIED, from joinfs-gpx-to-jfs-webcomponent/src/joinfs-gpx-to-jfs.js.
- * joinfs-jfs-toolkit embeds this component directly (see src/components/jfs-gpx-modal.js) for GPX
+ * JoinFS-recording-toolkit embeds this component directly (see src/components/jfs-gpx-modal.js) for GPX
  * import rather than reimplementing its conversion logic (ground-clamping, derived attitude,
  * derived gear/flaps/lights) - see PLAN.md Step 6b and docs/format-notes.md. Re-sync by replacing
  * this file with the upstream one verbatim if it's updated; do not hand-edit it here.
