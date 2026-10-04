@@ -16,6 +16,12 @@ GPX import embeds `joinfs-gpx-to-jfs-webcomponent` directly (vendored verbatim a
 
 See [REQUIREMENTS.md](REQUIREMENTS.md) for the full requirements and [PLAN.md](PLAN.md) for the implementation plan and known v1 limitations.
 
+## Documentation
+
+The user guide and the plugin documentation are in [docs/wiki](docs/wiki/Home.md) (the sources of the project wiki):
+getting started, map and timeline, editing tracks (move, pin, trim), saving and formats, keyboard and mouse, the plugin
+concept and how to write a plugin.
+
 ## Running locally
 
 Any static file server works (the app uses ES modules, so `file://` won't work in most browsers). For example, with VS Code's "Live Server" extension: right-click `index.html` → "Open with Live Server". Or from the command line:
