@@ -7,6 +7,7 @@
 - [Saving and Formats](Saving-and-Formats)
 - [Keyboard and Mouse](Keyboard-and-Mouse)
 - [Language and Theme](Language-and-Theme)
+- [Known Limitations](Known-Limitations)
 
 **Plugins**
 

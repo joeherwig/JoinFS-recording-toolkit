@@ -22,6 +22,7 @@ No installation and no build step: it is plain HTML and JavaScript. Your files n
 | know what ends up in the saved file | [Saving and Formats](Saving-and-Formats) |
 | use the keyboard and mouse faster | [Keyboard and Mouse](Keyboard-and-Mouse) |
 | change the language or the theme | [Language and Theme](Language-and-Theme) |
+| know what is not possible yet | [Known Limitations](Known-Limitations) |
 | understand how features are built as plugins | [Plugin Concept](Plugin-Concept) |
 | write my own plugin | [Writing a Plugin](Writing-a-Plugin) |
 
