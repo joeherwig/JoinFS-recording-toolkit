@@ -73,6 +73,12 @@ On Save, the cut parts are removed and the state of gear, flaps, lights and name
 written again at the start, so the replay begins correctly. Simulator events before the start are dropped. The
 trim follows the track when you move it. Trimmed recordings start at 00:00 in the saved file.
 
+### Ground height
+
+Shows the terrain under a track and opens a large altitude / ground height diagram of one aircraft. Two menu entries, a
+brown terrain profile in the ALT lane, not saved into the recording. Everything about it, including what is sent to
+open-meteo.com, is on the page [Ground Height](Ground-Height).
+
 ## Not editable (yet)
 
 Adding, deleting or moving single gear, flaps or light events is planned as a further plugin. See

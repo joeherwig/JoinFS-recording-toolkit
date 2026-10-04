@@ -1,0 +1,20 @@
+{
+  "legend.aircraft": "Altitude de l’aéronef",
+  "legend.ground": "Hauteur du sol",
+  "legend.agl": "Hauteur au-dessus du sol",
+  "tip.time": "Temps",
+  "tip.altitude": "Altitude",
+  "tip.ground": "Sol",
+  "tip.agl": "Au-dessus du sol",
+  "btn.zoomIn": "Zoom avant",
+  "btn.zoomOut": "Zoom arrière",
+  "btn.fit": "Tout afficher",
+  "btn.unit": "Changer l’unité (actuellement {unit})",
+  "hint": "Molette : zoom · Ctrl+molette ou glisser : défiler · Clic : déplacer la position de lecture · Double-clic : tout afficher",
+  "aria.chart": "Altitude et hauteur du sol de {name}, de {from} à {to}",
+  "noGround": "Aucune hauteur du sol disponible : seule l’altitude de l’aéronef est affichée.",
+  "stat.minAgl": "Hauteur minimale au-dessus du sol : {value}",
+  "stat.maxAlt": "Altitude maximale : {value}",
+  "stat.maxGround": "Sol le plus haut : {value}",
+  "empty": "Aucune donnée à afficher."
+}

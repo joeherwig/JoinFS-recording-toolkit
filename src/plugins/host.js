@@ -23,7 +23,7 @@ export class PluginHost {
   /**
    * env: { baseUrl, locale, fetchJson(url), fetchText(url), importModule(url), storage: {get(key), set(key, value)}, warn(message) }
    * services: { formats, shortcuts, getTracks(), exec(command), toast(message), t(key, params), addMessages(prefix, dict),
-   *   addDragGuard(fn), addRangeProvider(fn), addTimelineLayer(layer), requestRedraw(), openDialog(spec), getTime(), setTime(s), getSelectedId() }
+   *   addDragGuard(fn), addRangeProvider(fn), addTimelineLayer(layer), requestRedraw(), openDialog(spec), openModal(spec), getTime(), setTime(s), getSelectedId() }
    */
   constructor(env, services) {
     this._env = env;
@@ -172,7 +172,7 @@ export class PluginHost {
     if (!(await this.activate(pluginId))) return false;
     const action = this._trackActions.find((a) => a.pluginId === pluginId && a.id === actionId && !a.declared);
     if (!action) { this._env.warn(`Plugin "${pluginId}" registered no action "${actionId}".`); return false; }
-    action.run({ trackId });
+    await action.run({ trackId });             // plugins may return a promise (a lookup); a failure is theirs to report
     return true;
   }
 
@@ -229,7 +229,8 @@ export class PluginHost {
       icon: (name) => (entry.assets && entry.assets[name]) || '',
       time: Object.freeze({ get: () => s.getTime(), set: (seconds) => s.setTime(seconds) }),
       selection: Object.freeze({ get: () => s.getSelectedId() }),
-      i18n: Object.freeze({ t: (key, params) => s.t(`plugin.${entry.id}.${key}`, params) }),
+      /** t(key, params) looks up the plugin's own strings; locale is the UI language code (e.g. 'de'). */
+      i18n: Object.freeze({ t: (key, params) => s.t(`plugin.${entry.id}.${key}`, params), locale: this._env.locale || 'en' }),
       shortcuts: Object.freeze({
         register: (spec) => own(s.shortcuts.register({ ...spec, id: `${entry.id}:${spec.id}`, run: guard(spec.run) })),
       }),
@@ -250,6 +251,12 @@ export class PluginHost {
           const bar = s.openDialog({ ...spec, onChange: guard(spec.onChange || (() => {})), onButton: guard(spec.onButton || (() => {})) });
           own(() => bar.close());
           return bar;
+        },
+        /** Large modal with an empty body for the plugin's own element (a chart, ...); returns { body, close() }. */
+        openModal: (spec) => {
+          const modal = s.openModal({ ...spec, onClose: guard(spec.onClose || (() => {})) });
+          own(() => modal.close());
+          return modal;
         },
         registerTrackAction: (spec) => {
           // replaces the manifest-declared placeholder with the live action

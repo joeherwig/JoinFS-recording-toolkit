@@ -4,6 +4,7 @@
 - [Getting Started](Getting-Started)
 - [Map and Timeline](Map-and-Timeline)
 - [Editing Tracks](Editing-Tracks)
+- [Ground Height](Ground-Height)
 - [Saving and Formats](Saving-and-Formats)
 - [Keyboard and Mouse](Keyboard-and-Mouse)
 - [Language and Theme](Language-and-Theme)

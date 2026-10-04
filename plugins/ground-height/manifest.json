@@ -1,0 +1,13 @@
+{
+  "id": "ground-height",
+  "name": "Ground height",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "activation": "onAction",
+  "contributes": {
+    "trackActions": [
+      { "id": "toggle", "label": "action.toggle", "icon": "icons/ground.svg" },
+      { "id": "profile", "label": "action.profile", "icon": "icons/profile.svg" }
+    ]
+  }
+}

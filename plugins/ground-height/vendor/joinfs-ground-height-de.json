@@ -1,0 +1,20 @@
+{
+  "legend.aircraft": "Flughöhe",
+  "legend.ground": "Höhe des Bodens",
+  "legend.agl": "Höhe über Grund",
+  "tip.time": "Zeit",
+  "tip.altitude": "Höhe",
+  "tip.ground": "Boden",
+  "tip.agl": "Über Grund",
+  "btn.zoomIn": "Vergrößern",
+  "btn.zoomOut": "Verkleinern",
+  "btn.fit": "Alles anzeigen",
+  "btn.unit": "Einheit wechseln (jetzt {unit})",
+  "hint": "Mausrad: zoomen · Strg+Mausrad oder ziehen: verschieben · Klick: Wiedergabeposition setzen · Doppelklick: alles anzeigen",
+  "aria.chart": "Höhe und Bodenhöhe von {name}, von {from} bis {to}",
+  "noGround": "Keine Bodenhöhe verfügbar: es wird nur die Flughöhe gezeigt.",
+  "stat.minAgl": "Geringste Höhe über Grund: {value}",
+  "stat.maxAlt": "Größte Höhe: {value}",
+  "stat.maxGround": "Höchster Boden: {value}",
+  "empty": "Keine Daten vorhanden."
+}

@@ -1,0 +1,20 @@
+{
+  "legend.aircraft": "Vlieghoogte",
+  "legend.ground": "Hoogte van de grond",
+  "legend.agl": "Hoogte boven de grond",
+  "tip.time": "Tijd",
+  "tip.altitude": "Hoogte",
+  "tip.ground": "Grond",
+  "tip.agl": "Boven de grond",
+  "btn.zoomIn": "Inzoomen",
+  "btn.zoomOut": "Uitzoomen",
+  "btn.fit": "Alles tonen",
+  "btn.unit": "Eenheid wijzigen (nu {unit})",
+  "hint": "Wiel: zoomen · Ctrl+wiel of slepen: scrollen · Klik: afspeelpositie verplaatsen · Dubbelklik: alles tonen",
+  "aria.chart": "Hoogte en grondhoogte van {name}, van {from} tot {to}",
+  "noGround": "Geen grondhoogte beschikbaar: alleen de vlieghoogte wordt getoond.",
+  "stat.minAgl": "Laagste hoogte boven de grond: {value}",
+  "stat.maxAlt": "Hoogste hoogte: {value}",
+  "stat.maxGround": "Hoogste grond: {value}",
+  "empty": "Geen gegevens om te tonen."
+}

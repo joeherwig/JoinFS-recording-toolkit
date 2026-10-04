@@ -1,0 +1,17 @@
+{
+  "action.toggle": "Bodenhöhe: anzeigen / ausblenden",
+  "action.profile": "Flughöhe und Geländeprofil…",
+  "modal.title": "Flughöhe und Bodenhöhe: {name}",
+  "toast.looking": "Die Bodenhöhe von {name} wird abgefragt. Die Positionen werden dazu an open-meteo.com gesendet.",
+  "toast.busy": "Die Bodenhöhe von {name} wird gerade schon abgefragt.",
+  "toast.shown": "Die Bodenhöhe von {name} wird in der Höhenspur angezeigt.",
+  "toast.shownNoLane": "Die Bodenhöhe von {name} ist an, aber die Höhenspur (ALT) ist ausgeschaltet und deshalb nicht zu sehen.",
+  "toast.hidden": "Die Bodenhöhe von {name} ist ausgeblendet.",
+  "toast.error.network": "Der Bodenhöhen-Dienst ist nicht erreichbar. Prüfe die Internetverbindung.",
+  "toast.error.http": "Der Bodenhöhen-Dienst hat mit einem Fehler geantwortet.",
+  "toast.error.rateLimited": "Der Bodenhöhen-Dienst ist ausgelastet (Anfragelimit). Versuche es in ein paar Minuten noch einmal.",
+  "toast.error.badResponse": "Der Bodenhöhen-Dienst hat eine unbrauchbare Antwort geschickt.",
+  "toast.error.noPositions": "{name} hat keine brauchbaren Positionen, daher gibt es keine Bodenhöhe.",
+  "toast.error.other": "Die Bodenhöhe konnte nicht abgefragt werden.",
+  "toast.noLibrary": "Die Bodenhöhen-Komponente konnte nicht geladen werden."
+}

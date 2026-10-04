@@ -20,7 +20,7 @@ they are missing or broken, so the core still opens, plays and saves with **all 
 
 | Core | Plugin |
 |---|---|
-| neutral track model, formats registry | pin, trim, igc |
+| neutral track model, formats registry | pin, trim, igc, ground-height |
 | map, timeline, playback | future: event editor, analytics |
 | undo/redo history | |
 | keyboard shortcut service | |
@@ -57,7 +57,7 @@ plugins/<id>/
 
 ## How plugins are found and started
 
-1. `src/plugins/known.js` lists the ids of the first-party plugins this build knows (`pin`, `trim`, `igc`).
+1. `src/plugins/known.js` lists the ids of the first-party plugins this build knows (`pin`, `trim`, `igc`, `ground-height`).
 2. At startup the host tries to load all of them in parallel, **without delaying the app**: it fetches
    `plugins/<id>/manifest.json`, validates it, loads the locale files and the icons.
 3. Because the manifest is declarative, the **menu entries appear before any plugin code is loaded**. A plugin
@@ -99,7 +99,12 @@ See [Writing a Plugin](Writing-a-Plugin) for the details.
   `joinfs-igc-to-jfs` component in the converter dialog; the component ships inside the plugin folder, so deleting the
   folder removes the feature completely.
 
-User documentation for pin and trim is in [Editing Tracks](Editing-Tracks), for igc in [Saving and Formats](Saving-and-Formats#igc-import).
+- **ground-height:** looks the terrain height up along a track and shows it in the timeline's ALT lane
+  (`registerTimelineLayer` with the lane scale `altitudeY`), and opens a large zoomable altitude/ground diagram
+  (`ui.openModal`). Engine and chart come from the separate repo
+  [joinfs-ground-height-webcomponent](https://github.com/joeherwig/joinfs-ground-height-webcomponent), vendored into the plugin folder.
+
+User documentation for pin, trim and ground-height is in [Editing Tracks](Editing-Tracks), for igc in [Saving and Formats](Saving-and-Formats#igc-import).
 
 ## Roadmap
 

@@ -1,0 +1,20 @@
+{
+  "legend.aircraft": "Quota dell’aeromobile",
+  "legend.ground": "Altezza del terreno",
+  "legend.agl": "Altezza sul terreno",
+  "tip.time": "Tempo",
+  "tip.altitude": "Quota",
+  "tip.ground": "Terreno",
+  "tip.agl": "Sul terreno",
+  "btn.zoomIn": "Ingrandisci",
+  "btn.zoomOut": "Riduci",
+  "btn.fit": "Mostra tutto",
+  "btn.unit": "Cambia l’unità (ora {unit})",
+  "hint": "Rotella: zoom · Ctrl+rotella o trascina: scorri · Clic: sposta la posizione di riproduzione · Doppio clic: mostra tutto",
+  "aria.chart": "Quota e altezza del terreno di {name}, da {from} a {to}",
+  "noGround": "Nessuna altezza del terreno disponibile: viene mostrata solo la quota dell’aeromobile.",
+  "stat.minAgl": "Altezza minima sul terreno: {value}",
+  "stat.maxAlt": "Quota massima: {value}",
+  "stat.maxGround": "Terreno più alto: {value}",
+  "empty": "Nessun dato da mostrare."
+}

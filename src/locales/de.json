@@ -28,6 +28,8 @@
   "timeline.eventsTitle": "Marker für Fahrwerk, Klappen und Lichter",
   "modal.gpxTitle": "GPX in JoinFS-Aufzeichnung umwandeln",
   "modal.close": "Schließen",
+  "modal.maximize": "Ganzes Fenster füllen",
+  "modal.restore": "Wieder normale Größe",
   "toolbar.trackMenuEmpty": "Keine Spur-Aktionen verfügbar",
   "timeline.trackMenu": "Spur-Aktionen"
 }

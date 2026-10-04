@@ -28,6 +28,8 @@
   "timeline.eventsTitle": "Gear/flaps/light markers",
   "modal.gpxTitle": "Convert GPX to JoinFS recording",
   "modal.close": "Close",
+  "modal.maximize": "Fill the whole window",
+  "modal.restore": "Back to normal size",
   "toolbar.trackMenuEmpty": "No track actions available",
   "timeline.trackMenu": "Track actions"
 }

@@ -46,3 +46,16 @@ ends.
 | wheel, drag | map | zoom, pan |
 
 Touch screens use the same drags. Buttons and dialog controls are at least 44 px high.
+
+## Inside the ground profile window
+
+The large diagram of [Ground Height](Ground-Height) has its own keys while it has the focus (the page's global keys such as
+**Space** and **+** / **−** for the map are suspended behind it):
+
+| Key / gesture | Action |
+|---|---|
+| **+** / **−**, wheel | zoom (the wheel zooms around the pointer) |
+| **←** / **→**, drag, **Ctrl + wheel** | scroll in time |
+| **Home**, double-click | show the whole flight |
+| click | move the playhead there |
+| **Esc**, **×** | close the window |

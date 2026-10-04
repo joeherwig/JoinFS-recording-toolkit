@@ -1,0 +1,20 @@
+{
+  "legend.aircraft": "Altitude da aeronave",
+  "legend.ground": "Altura do solo",
+  "legend.agl": "Altura acima do solo",
+  "tip.time": "Tempo",
+  "tip.altitude": "Altitude",
+  "tip.ground": "Solo",
+  "tip.agl": "Acima do solo",
+  "btn.zoomIn": "Aumentar",
+  "btn.zoomOut": "Diminuir",
+  "btn.fit": "Mostrar tudo",
+  "btn.unit": "Mudar a unidade (agora {unit})",
+  "hint": "Roda: zoom · Ctrl+roda ou arrastar: deslocar · Clique: mover a posição de reprodução · Duplo clique: mostrar tudo",
+  "aria.chart": "Altitude e altura do solo de {name}, de {from} a {to}",
+  "noGround": "Sem altura do solo disponível: só a altitude da aeronave é mostrada.",
+  "stat.minAgl": "Menor altura acima do solo: {value}",
+  "stat.maxAlt": "Maior altitude: {value}",
+  "stat.maxGround": "Solo mais alto: {value}",
+  "empty": "Sem dados para mostrar."
+}
