@@ -76,3 +76,14 @@ test('registry: modifier state must match, and unregister removes the shortcut',
   assert.equal(sc.handle(ev('l', [el('DIV')])), false);
   assert.equal(n, 1);
 });
+
+test('plus and minus zoom shortcuts match with or without Shift, but leave Ctrl+plus to the browser', () => {
+  const sc = new Shortcuts();
+  let zoom = 0;
+  sc.register({ key: '+', run: () => { zoom++; } });
+  assert.equal(sc.handle(ev('+', [el('DIV')], { shiftKey: true })), true); // US layout: + needs Shift
+  assert.equal(sc.handle(ev('+', [el('DIV')])), true);                      // number pad
+  assert.equal(sc.handle(ev('+', [el('DIV')], { ctrlKey: true })), false);  // browser page zoom
+  assert.equal(sc.handle(ev('+', [el('INPUT')])), false);                   // typing
+  assert.equal(zoom, 2);
+});

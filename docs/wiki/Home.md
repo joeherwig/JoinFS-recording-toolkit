@@ -26,6 +26,21 @@ No installation and no build step: it is plain HTML and JavaScript. Your files n
 | understand how features are built as plugins | [Plugin Concept](Plugin-Concept) |
 | write my own plugin | [Writing a Plugin](Writing-a-Plugin) |
 
+## Quick reference
+
+| Keys | Action |
+|---|---|
+| **Ctrl+O** | import (open) files; or drop them onto the map or timeline |
+| **Space** | play / pause |
+| **+** / **−** | zoom the timeline in / out |
+| **L** | cycle the map layer (dark, light, satellite) |
+| **Ctrl+Z** / **Ctrl+Shift+Z** | undo / redo |
+| **Ctrl+S** | save |
+| **Esc** | close the open menu or dialog without applying; otherwise clear the selection |
+| right-click a track row | track actions (pin, trim) |
+
+All of them, with the mouse gestures, are on [Keyboard and Mouse](Keyboard-and-Mouse). On a Mac use Cmd instead of Ctrl.
+
 ## What it can do
 
 - **Open** `.jfs` recordings (current JoinFS and older ones) and `.gpx` tracks (converted on the fly), several at once.

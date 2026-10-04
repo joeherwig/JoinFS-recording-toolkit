@@ -26,7 +26,7 @@ side is the chart.
 |---|---|
 | ▶ / **Space** | play and pause; at the end it jumps back to the start |
 | speed (0.5x … 50x) | playback speed |
-| − / + | zoom the time axis |
+| − / + (or the **−** and **+** keys) | zoom the time axis |
 | ⋮ | the track actions menu for the selected track (or the only track); see [Editing Tracks](Editing-Tracks) |
 | time readout | the playhead time |
 | ruler | click or drag to scrub the playhead |

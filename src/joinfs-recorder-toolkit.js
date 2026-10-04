@@ -57,6 +57,10 @@ async function main() {
   shortcuts.register({ id: 'open', key: 'o', primary: true, allowInTyping: true, run: () => toolbarEl.openFiles() });
   // Space's default action is scrolling the page - not what we want here, so it is prevented
   shortcuts.register({ id: 'play-pause', key: ' ', run: () => timelineEl.togglePlay() });
+  // + and - zoom the timeline like its buttons; '=' and '_' are the unshifted/shifted partners on common keyboards.
+  // Ctrl/Cmd + and - stay with the browser's page zoom.
+  for (const key of ['+', '=']) shortcuts.register({ id: `zoom-in${key}`, key, run: () => timelineEl.zoomIn() });
+  for (const key of ['-', '_']) shortcuts.register({ id: `zoom-out${key}`, key, run: () => timelineEl.zoomOut() });
   shortcuts.register({ id: 'undo', key: 'z', primary: true, run: () => store.undo() });
   shortcuts.register({ id: 'redo', key: 'z', primary: true, shift: true, run: () => store.redo() });
   shortcuts.register({ id: 'redo-y', key: 'y', primary: true, run: () => store.redo() });

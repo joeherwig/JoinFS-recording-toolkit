@@ -149,6 +149,10 @@ export class JfsTimeline extends HTMLElement {
   /** Public entry point so joinfs-recorder-toolkit.js can trigger this from the global Space hotkey. */
   togglePlay() { this._togglePlay(); }
 
+  /** Public entry points for the + and - hotkeys: zoom the time axis around the centre of the chart. */
+  zoomIn() { this._zoomAround(this._canvasWrap.clientWidth / 2, 2); }
+  zoomOut() { this._zoomAround(this._canvasWrap.clientWidth / 2, 0.5); }
+
   _togglePlay() {
     if (!this._store) return;
     this._store.setPlaying(!this._store.playing);
