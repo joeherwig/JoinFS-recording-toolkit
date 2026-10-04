@@ -70,7 +70,7 @@ App-chrome theme (`theme.js`: `auto`/`light`/`dark`, CSS custom properties, `loc
 
 **Track**: `{ id, sourceFileName, plane, callsign, nickname, model, typeRole, icaoType, icaoAirline, livery, detectedBuildVariant, sourceVersion, timeOffsetS, visible, showAltitude, showSpeed, color, frames: { times, types, lat, lon, alt, pitch, bank, heading, vX, vY, vZ, elevation, staticCgToGround, groundFlags, opaquePayload }, events: [{timeS, variable, value}] }`.
 
-**Move**: sets `timeOffsetS` only (O(1)). **Remove**: splice from `project.tracks`. **Export**: rebase so the minimum effective frame time is ≈0, write via `encodeJfsFile(tracks, { jfsVersion: 21008, buildVariant })`.
+**Move**: sets `timeOffsetS` only (O(1)). **Remove**: splice from `project.tracks`. **Export**: rebase so the minimum effective frame time is ≈0, write via `encodeJfsFile(tracks, { buildVariant })` (version 21008, current layout; superseded in part by PLAN-v2.md).
 
 ## Step 3 — Performance
 

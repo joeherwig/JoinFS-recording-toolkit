@@ -4,6 +4,26 @@ The authoritative format spec lives in the main JoinFS repo at `JoinFS/docs/reco
 This file only documents choices `src/jfs-codec.js` makes that aren't fully spelled out there, or
 that this toolkit deliberately narrows for v1.
 
+## Two position-frame layouts under one version number
+
+JoinFS's own recorder changed in upstream #181 (`JoinFS/JfsFrames.cs`): it stopped writing and reading the
+4-byte `staticCgToGround` that 26.6-beta appended to every aircraft position frame, but **kept `FileVersion`
+at 21008**. So a version-21008 file is one of two layouts, and nothing in the file says which:
+
+| layout | written by | aircraft position frame | `staticCgToGround` |
+|---|---|---|---|
+| `current` | current JoinFS (#181), this toolkit, the GPX converter | 9-byte header + 87-byte payload = **96 bytes** | not stored (JoinFS reads it as 0) |
+| `legacy-staticcg` | 26.6-beta builds, older exports of this toolkit/converter | 9 + 91 = **100 bytes** | 4-byte float after the ground flags |
+
+Files below 21008 are always `current`-shaped. `decodeJfsFile` therefore **probes**: it parses the whole file
+with each candidate layout (strictly: valid frame types, plausible lat/lon, valid tail strings, a valid trailing
+object count, exact end of file) and keeps the first that parses cleanly; the result carries `layout` (and each
+track `sourceLayout`), and a `legacy-staticcg` file adds an info warning. `encodeJfsFile` writes the `current`
+layout only (the `layout` option exists for tests and 26.6-beta interop). A wrong guess misreads the frames by 4
+bytes each, which is what showed up as "Unrecognized frame type 114 at byte offset 149" before this was probed.
+Saving always writes the current layout, so a `legacy-staticcg` file loses its static CG heights; current JoinFS
+cannot use them anyway (it applies `localClearance - 0`, i.e. treats the recorded altitude as the contact point).
+
 ## Units
 
 The wire format stores latitude/longitude/pitch/bank/heading in **radians** and
@@ -14,7 +34,8 @@ deals in degrees - see `DEG2RAD`/`RAD2DEG` in `src/jfs-codec.js`.
 ## What's preserved on a round-trip, and what isn't
 
 - **Position, attitude (pitch/bank/heading), horizontal+vertical velocity, elevation, on-ground
-  flag, static CG-to-ground**: fully decoded and re-encoded.
+  flag**: fully decoded and re-encoded. **Static CG-to-ground** is decoded from `legacy-staticcg` files but
+  never written (see above).
 - **Control surfaces (rudder/elevator/aileron/brakes) and angular velocity/acceleration**: read but
   discarded - not part of this toolkit's `Track` data model (see `PLAN.md` Step 2), so they're
   always written back as zero. A JoinFS playback of a saved file will show centered control surfaces

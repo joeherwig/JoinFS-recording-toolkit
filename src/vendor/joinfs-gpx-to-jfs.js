@@ -81,16 +81,14 @@
       // the track. Without it the attitude snaps by several degrees in a single frame the moment the on-ground
       // flag flips - at rotation, at touchdown, and repeatedly if the flag chatters near its threshold.
       groundBlendS: 2,
-      // STATIC CG TO GROUND, in metres, written in file version 21008 and up: how far the recorded altitude sits
-      // above the point where the wheels touch. 0 says "my altitude is the contact point", and JoinFS answers by
-      // adding the clearance of whichever model it actually spawns - seating that model's wheels on the terrain
-      // whether it is bigger or smaller than the one that was recorded.
-      //
-      // 0 is truthful here only because the on-ground altitude is clamped to the field reference further down:
-      // while the aircraft is down, what is written *is* the ground. It was wrong before that clamp existed -
-      // the clearance was then added on top of a datum that was already metres out, which is the JoinFS source's
-      // "hovers meters above the ground". `null` writes NaN instead, which JoinFS reads as unknown and answers by
-      // making no ground correction at all; use it if the spawned model ends up sitting too high.
+      // STATIC CG TO GROUND, in metres: how far the recorded altitude sits above the point where the wheels touch.
+      // Only the older JoinFS layout (26.6-beta, version 21008 with a 4-byte field per position frame) stores it;
+      // the current JoinFS (upstream #181, JfsFrames.cs) neither writes nor reads it and treats it as 0, which is
+      // exactly "my altitude is the contact point" - true here because the on-ground altitude is clamped to the
+      // field reference further down. So by default the field is NOT written (writeStaticCg: false) and the value
+      // below has no effect on the output. Set writeStaticCg: true to produce the older layout; then 0 keeps the
+      // meaning above and `null` writes NaN ("unknown": JoinFS makes no ground correction at all).
+      writeStaticCg: false,
       groundClearanceM: 0,
       // Control-surface deflections. 'off' (the default) writes them neutral, which is all a GPX honestly
       // supports - it records no control data at all; 'derived' infers them from the manoeuvre the track
@@ -433,8 +431,10 @@
         // The floor is the field plus whatever clearance the recording declares, so the altitude written agrees
         // with what groundClearanceM says about it. At the default 0 the two are the same. Declaring the spawned
         // model's real gear height instead leaves JoinFS's ground-clearance correction with nothing to add, which
-        // is what removes the step at liftoff when that correction is switched off again.
-        const floor = ref + (o.groundClearanceM || 0);
+        // is what removes the step at liftoff when that correction is switched off again. A recording that does
+        // not carry the clearance (writeStaticCg false, the current JoinFS layout) is read as 0 by JoinFS, so the
+        // floor must be the plain field there or the aircraft would hover by the declared amount.
+        const floor = ref + ((o.writeStaticCg && o.groundClearanceM) || 0);
         const altOut = ground ? Math.max(alt[i], floor) : alt[i];
         samples[i] = {
           t: t[i], lat: lat[i], lon: lon[i], alt: altOut,
@@ -476,7 +476,8 @@
       if (o.fs2024 && v >= 21004) tail.push(stringBytes(o.livery));
       if ((o.fs2024 && v >= 21005) || (!o.fs2024 && v >= 21004)) tail.push(stringBytes(o.icaoType), stringBytes(o.icaoAirline));
       const len = (a) => a.reduce((s, x) => s + x.length, 0);
-      const frameSize = 96 + (v >= 21008 ? 4 : 0);
+      const withCg = !!o.writeStaticCg && v >= 21008;   // older layout only, see DEFAULTS.writeStaticCg
+      const frameSize = 96 + (withCg ? 4 : 0);
       const cgFt = o.groundClearanceM === null || o.groundClearanceM === undefined ? NaN : o.groundClearanceM / 0.3048;
       const size = 2 + 4 + 1 + len(head) + 1 + 4 + samples.length * frameSize + (sys ? sys.bytes : 0) + len(tail) + 4;
       const buf = new ArrayBuffer(size), dv = new DataView(buf), u8 = new Uint8Array(buf);
@@ -506,7 +507,7 @@
         for (const c of [s.rudder, s.elevator, s.aileron, 0, 0]) { dv.setInt16(p, axis(c), true); p += 2; }
         dv.setFloat32(p, s.elevation, true); p += 4;
         dv.setUint8(p, s.ground ? 1 : 0); p += 1;
-        if (v >= 21008) { dv.setFloat32(p, cgFt, true); p += 4; }
+        if (withCg) { dv.setFloat32(p, cgFt, true); p += 4; }
         const extra = sys && sys.byIdx.get(k);           // gear/flaps/lights frames share the sample's timestamp
         if (extra) { u8.set(extra, p); p += extra.length; }
       }
@@ -1795,7 +1796,7 @@ progress{width:100%;height:4px;margin-top:.5rem;accent-color:var(--_accent)}
             livery: v.livery,
             nickname: v.nickname,
             typerole: TYPEROLES[this._fixed.typerole],
-            jfsVersion: DEFAULTS.jfsVersion,         // 21008: ICAO strings plus the static-CG field
+            jfsVersion: DEFAULTS.jfsVersion,         // 21008: ICAO strings; the static-CG field is not written (current JoinFS layout)
             fs2024: v.build === 'fs2024',
             systems: this._fixed.systems,
             hz: Number(this._fixed.hz),
