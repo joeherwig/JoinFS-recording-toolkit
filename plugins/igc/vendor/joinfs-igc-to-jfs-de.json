@@ -1,0 +1,21 @@
+{
+  "title": "IGC-Flugaufzeichnung in eine JoinFS-Aufzeichnung umwandeln",
+  "privacy": "Die Datei wird in deinem Browser gelesen und nirgendwohin hochgeladen.",
+  "drop.prompt": "Zieh eine IGC-Datei hierher",
+  "drop.choose": "Datei auswählen",
+  "drop.aria": "Ablagebereich für eine IGC-Flugaufzeichnung",
+  "loading": "Flug wird gelesen…",
+  "summary.pilot": "Pilot",
+  "summary.glider": "Segelflugzeug",
+  "summary.date": "Datum",
+  "summary.fixes": "Positionen",
+  "summary.duration": "Dauer",
+  "summary.altitudePressure": "Höhe: vom Drucksensor (die Aufzeichnung enthält keine GPS-Höhe)",
+  "err.notIgc": "Das sieht nicht nach einer IGC-Datei aus.",
+  "err.noDate": "Das Flugdatum (HFDTE) fehlt oder ist ungültig.",
+  "err.noFixes": "In dieser Datei wurden keine GPS-Positionen (B-Zeilen) gefunden.",
+  "err.fewFixes": "Nur {n} Positionen gefunden; ein Flug braucht mindestens 2.",
+  "err.tooLarge": "Die Datei ist zu groß (Limit {mb} MB).",
+  "err.read": "Die Datei konnte nicht gelesen werden.",
+  "err.noConverter": "Die GPX-Konverter-Komponente konnte nicht geladen werden ({src})."
+}

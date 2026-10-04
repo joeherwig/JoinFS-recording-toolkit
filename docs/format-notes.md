@@ -80,7 +80,7 @@ is a rendering-time filter, not a data-cleaning one.
 ## GPX import
 
 GPX import embeds the real `joinfs-gpx-to-jfs-webcomponent` converter directly (vendored verbatim at
-`src/vendor/joinfs-gpx-to-jfs.js`, opened in a modal by `src/components/jfs-gpx-modal.js`) rather than
+`src/vendor/joinfs-gpx-to-jfs.js`, opened in a modal by `src/components/jfs-converter-modal.js`) rather than
 reimplementing its conversion. This is a deliberate change from an earlier version of this toolkit,
 which had its own much-simplified GPX importer (`src/gpx-import.js`, now removed) that only derived
 position/altitude/heading/ground-speed straight from the raw `<trkpt>` elements - no ground-clamping

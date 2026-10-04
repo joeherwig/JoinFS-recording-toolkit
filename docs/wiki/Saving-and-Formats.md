@@ -56,6 +56,25 @@ The converter is the separate
 [joinfs-gpx-to-jfs-webcomponent](https://github.com/joeherwig/joinfs-gpx-to-jfs-webcomponent), included unchanged in
 `src/vendor/`.
 
+## IGC import
+
+An `.igc` file (the log of a glider flight recorder) is imported by the **igc** plugin. The dialog is the GPX one with a
+flight summary on top (pilot, glider, date, fixes, duration) and the form **prefilled from the IGC header**:
+
+| Form field | Taken from |
+|---|---|
+| Callsign | competition id, else glider id |
+| Model | glider type |
+| Nickname | pilot |
+| ICAO type | `GLID` (generic glider; change it to e.g. `AS21` if you know it) |
+| Category | glider |
+
+The conversion is done by the same GPX converter, so ground contact, attitude, gear, flaps and lights are derived the same
+way; altitude is the GNSS altitude (pressure altitude for 2D fixes). In the toolkit **neither dialog asks for the target
+format** (FS2024 or other): the build selector in the toolbar decides when saving. The component behind it is
+[joinfs-igc-to-jfs-webcomponent](https://github.com/joeherwig/joinfs-igc-to-jfs-webcomponent), which also works on its own
+and where the file details are documented.
+
 ## Formats are modules
 
 Import and export formats register themselves in a registry (`src/formats/`); the app never reads bytes itself. Adding

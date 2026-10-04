@@ -4,7 +4,8 @@
 import { pickFilesToOpen, saveJfsFile } from '../file-io.js';
 import { exportProject } from '../project-model.js';
 import { formats } from '../formats/index.js';
-import { openGpxImportModal } from './jfs-gpx-modal.js';
+import { openGpxImportModal, openConverterModal } from './jfs-converter-modal.js';
+import { jfsLegacyFormat } from '../formats/jfs-legacy.js';
 import { t } from '../i18n.js';
 import { svgIcon } from '../track-menu.js';
 import { formatClock, parseClock } from '../clock.js';
@@ -347,7 +348,14 @@ export class JfsToolbar extends HTMLElement {
    * Interactive formats (GPX) get their dialog through `ctx.ui`; they resolve `null` if the user cancels.
    */
   async importFiles(files) {
-    const ctx = { ui: { convertGpx: (file) => openGpxImportModal(file) } };
+    // Interactive importers get UI hooks. `convert(file, opts)` runs a converter component in the modal (see
+    // openConverterModal) and decodes the resulting .jfs: { tracks, warnings }, or null when the user cancels.
+    const convert = async (file, opts) => {
+      const result = await openConverterModal(file, opts);
+      if (!result) return null;
+      return jfsLegacyFormat.decode(await result.blob.arrayBuffer(), { name: result.filename });
+    };
+    const ctx = { ui: { convertGpx: (file) => openGpxImportModal(file) }, convert };
     for (const file of files) {
       try {
         const result = await formats.decodeFile(file, ctx);

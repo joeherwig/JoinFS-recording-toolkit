@@ -108,7 +108,7 @@ ctx.ui.requestRedraw()                         ask the views to redraw after a c
 ctx.ui.toast(message)
 
 ctx.io.registerExportTransform({ id, order, apply(tracks) })   order: lowest first, default 100
-ctx.io.registerFormat(spec)                    see src/formats/registry.js
+ctx.io.registerFormat(spec)                    { id, label, extensions, sniff(u8, name), decode(buffer, decodeCtx) }, see src/formats/registry.js
 
 ctx.shortcuts.register({ id, key, primary, shift, allowInTyping, run })
 ```
@@ -136,6 +136,26 @@ light and dark themes.
 `apply(tracks)` runs when saving, on **copies** with project time already applied and the part before 00:00 already
 cut. Return the tracks to save (drop a track by leaving it out). After all transforms the earliest frame is moved to
 time 0. The live project is never modified by saving.
+
+### Formats that need a converter dialog
+
+`decode(buffer, decodeCtx)` receives `decodeCtx.file` (the dropped or picked file) and `decodeCtx.convert(file, opts)`. It opens
+the toolkit's converter dialog with a web component of your own and resolves `{ tracks, warnings }` (the converter's `.jfs`
+result, decoded), or `null` if the user closes the dialog:
+
+```js
+async decode(_buffer, decodeCtx) {
+  return decodeCtx.convert(decodeCtx.file, {
+    tag: 'my-converter',                                        // custom element with loadFile(file) and a 'converted' event
+    script: new URL('./vendor/my-converter.js', import.meta.url).href,
+    title: ctx.i18n.t('dialog.title'),
+    attributes: { /* extra attributes */ },
+  });
+}
+```
+
+The dialog loads the GPX converter first (your component may build on it) and always sets `build="fs2024"`, `lang` and
+`no-url-params`, so the target-format question is not asked. See `plugins/igc` for a complete example.
 
 ### Dialogs
 

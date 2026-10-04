@@ -7,7 +7,7 @@ track, and save everything as one `.jfs` that JoinFS replays.
 No installation and no build step: it is plain HTML and JavaScript. Your files never leave your computer.
 
 > [!TIP]
-> **Drag and drop:** drag one or **several** `.jfs` and `.gpx` files (even mixed) from your file manager onto the map
+> **Drag and drop:** drag one or **several** `.jfs`, `.gpx` and `.igc` files (even mixed) from your file manager onto the map
 > or the timeline, and they are all imported at once. Each recorded aircraft becomes its own track.
 
 ![The toolkit with three aircraft on the dark map layer](images/overview-dark.png)
@@ -43,7 +43,7 @@ All of them, with the mouse gestures, are on [Keyboard and Mouse](Keyboard-and-M
 
 ## What it can do
 
-- **Open** `.jfs` recordings (current JoinFS and older ones) and `.gpx` tracks (converted on the fly), several at once.
+- **Open** `.jfs` recordings (current JoinFS and older ones), `.gpx` tracks and `.igc` glider flight logs (both converted on the fly), several at once.
 - **Show** every track's path on a map, coloured by altitude, grey while on the ground, with markers for gear, flaps
   and lights; and as altitude and speed charts on a timeline with a moving playhead.
 - **Play back** all tracks together at 0.5x to 50x.

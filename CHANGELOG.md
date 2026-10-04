@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- **IGC import** (plugin `igc`): `.igc` glider flight logs open like GPX tracks, with a flight summary and the form prefilled from
+  the IGC header (competition id or glider id, glider type, pilot, ICAO type `GLID`, category glider). Based on the new
+  component [joinfs-igc-to-jfs-webcomponent](https://github.com/joeherwig/joinfs-igc-to-jfs-webcomponent), vendored into the
+  plugin folder.
+- The converter dialogs embedded in the toolkit no longer ask for the target format (FS2024 or other); the toolbar's build
+  selector decides when saving. This applies to GPX and IGC.
+- Plugins can open converter dialogs through `decodeCtx.convert(file, { tag, script, title })` in their format's `decode`.
+- `src/components/jfs-gpx-modal.js` is now the generic `jfs-converter-modal.js`.
+
 ## 1.0.0
 
 First stable release. The toolkit opens JoinFS recordings, shows them on a map and a timeline, lets you line up,

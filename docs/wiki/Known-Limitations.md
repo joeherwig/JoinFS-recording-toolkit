@@ -34,7 +34,9 @@ What the toolkit does not do (yet), so nothing comes as a surprise.
   owner node, which replayed aircraft share, so a live map fed from the websocket may show only one of them, stop
   moving, or jump. The saved file is fine; this is a JoinFS-side issue and is not fixed by the toolkit.
 
-## GPX
+## GPX and IGC
 
 - **GPX import needs the converter dialog.** The track must carry timestamps, and you confirm aircraft and options in
   the embedded converter instead of getting a silent automatic conversion. See [Saving and Formats](Saving-and-Formats).
+- **IGC logs are read as one flight per file,** with the GNSS altitude (pressure altitude for 2D fixes). The security signature
+  is not checked, and no task, turn points or events are imported. The ICAO type is the generic `GLID` unless you change it.

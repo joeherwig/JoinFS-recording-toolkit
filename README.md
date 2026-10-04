@@ -2,7 +2,7 @@
 
 A browser-based toolkit to **visualize** and **edit** [JoinFS](https://joinfs.net/) `.jfs` flight-recording files on a map and a video-editor-style timeline.
 
-- Load one or more `.jfs` (or `.gpx`) files into a project; each recorded aircraft becomes an independent track.
+- Load one or more `.jfs`, `.gpx` or `.igc` (glider flight log) files into a project; each recorded aircraft becomes an independent track.
 - View every track's flight path on a map (dark / OSM / satellite tile layers), with an altitude-colored, grey-on-ground path and gear/flaps/light event markers for the focused track.
 - Move a track's appearance in time or remove it entirely on the timeline.
 - Save the project back out as a single `.jfs` file JoinFS can load and play back.

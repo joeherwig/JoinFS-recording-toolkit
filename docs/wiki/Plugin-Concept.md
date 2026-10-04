@@ -20,7 +20,7 @@ they are missing or broken, so the core still opens, plays and saves with **all 
 
 | Core | Plugin |
 |---|---|
-| neutral track model, formats registry | pin, trim |
+| neutral track model, formats registry | pin, trim, igc |
 | map, timeline, playback | future: event editor, analytics |
 | undo/redo history | |
 | keyboard shortcut service | |
@@ -57,7 +57,7 @@ plugins/<id>/
 
 ## How plugins are found and started
 
-1. `src/plugins/known.js` lists the ids of the first-party plugins this build knows (`pin`, `trim`).
+1. `src/plugins/known.js` lists the ids of the first-party plugins this build knows (`pin`, `trim`, `igc`).
 2. At startup the host tries to load all of them in parallel, **without delaying the app**: it fetches
    `plugins/<id>/manifest.json`, validates it, loads the locale files and the icons.
 3. Because the manifest is declarative, the **menu entries appear before any plugin code is loaded**. A plugin
@@ -84,18 +84,22 @@ planned).
 | the part of a track that is shown and saved | trim | `tracks.registerRange` |
 | a transform of the tracks when saving | trim | `io.registerExportTransform` |
 | a keyboard shortcut | (none yet) | `shortcuts.register` |
-| an import/export format | (formats are built in for now) | `io.registerFormat` |
+| an import/export format | igc | `io.registerFormat` |
 
 See [Writing a Plugin](Writing-a-Plugin) for the details.
 
-## The two plugins that exist
+## The plugins that exist
 
 - **pin:** locks a track in time. About 40 lines; it is the smallest example of the whole stack (menu entry, guard,
   timeline layer, undoable command).
 - **trim:** non-destructive trimming. It shows how a plugin narrows what is *shown* (`registerRange`), what is *saved*
   (`registerExportTransform`), and keeps the state of gear, flaps, lights and names correct at the new start.
 
-User documentation for both is in [Editing Tracks](Editing-Tracks).
+- **igc:** opens `.igc` glider logs. It registers the format and asks the toolkit to run the vendored
+  `joinfs-igc-to-jfs` component in the converter dialog; the component ships inside the plugin folder, so deleting the
+  folder removes the feature completely.
+
+User documentation for pin and trim is in [Editing Tracks](Editing-Tracks), for igc in [Saving and Formats](Saving-and-Formats#igc-import).
 
 ## Roadmap
 

@@ -29,8 +29,9 @@ export async function loadPlugin(id, { tracks = [], locale = 'en', storage = {} 
     storage: { get: (k) => storage[k] ?? null, set: (k, v) => { storage[k] = v; } },
     warn: (m) => warnings.push(m),
   };
+  const formats = new FormatRegistry();
   const services = {
-    formats: new FormatRegistry(), shortcuts: new Shortcuts(),
+    formats, shortcuts: new Shortcuts(),
     getTracks: () => tracks,
     exec: (c) => history.exec(c),
     toast: (m) => toasts.push(m),
@@ -53,7 +54,7 @@ export async function loadPlugin(id, { tracks = [], locale = 'en', storage = {} 
   const host = new PluginHost(env, services);
   await host.loadAll([id]);
   return {
-    host, history, redraws, warnings, toasts, guards, layers, ranges, dialogs, state, messages, tracks,
+    host, history, redraws, formats, warnings, toasts, guards, layers, ranges, dialogs, state, messages, tracks,
     rangeOf: (track) => { for (const r of ranges) { const v = r(track); if (v) return v; } return null; },
     canDrag: (track) => [...guards].every((g) => g(track) !== false),
     lastDialog: () => dialogs[dialogs.length - 1],
