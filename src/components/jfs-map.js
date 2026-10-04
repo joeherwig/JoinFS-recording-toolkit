@@ -5,6 +5,7 @@
 // see PLAN.md Step 4.
 
 import { altColor, desaturate, buildColoredRuns, decimateStride, interpolatePosition, isValidLatLon, firstValidPositionIndex, buildPositionSeries } from '../geo.js';
+import { shortcuts } from '../shortcuts.js';
 
 let _leafletPromise = null;
 function loadLeaflet() {
@@ -97,7 +98,6 @@ class JfsMap extends HTMLElement {
     this._L = null;
     this._map = null;
     this._tileLayers = [];
-    this._onKeydown = this._onKeydown.bind(this);
   }
 
   set store(store) {
@@ -119,7 +119,10 @@ class JfsMap extends HTMLElement {
   get store() { return this._store; }
 
   async connectedCallback() {
-    document.addEventListener('keydown', this._onKeydown);
+    this._unregisterKeys = [
+      shortcuts.register({ id: 'map-clear-selection', key: 'Escape', preventDefault: false, run: () => { if (this._store) this._store.clearSelection(); } }),
+      shortcuts.register({ id: 'map-cycle-layer', key: 'l', preventDefault: false, run: () => this.cycleLayer() }),
+    ];
     const { L, css } = await loadLeaflet();
     this._L = L;
     const styleEl = document.createElement('style');
@@ -132,22 +135,12 @@ class JfsMap extends HTMLElement {
   }
 
   disconnectedCallback() {
-    document.removeEventListener('keydown', this._onKeydown);
+    for (const off of this._unregisterKeys || []) off();
+    this._unregisterKeys = null;
   }
 
   attributeChangedCallback(name, oldVal, newVal) {
     if (name === 'theme' && this._map) this._swapTileLayer(newVal || 'dark');
-  }
-
-  _onKeydown(e) {
-    if (e.key === 'Escape' && this._store) this._store.clearSelection();
-    if (
-      (e.key === 'l' || e.key === 'L') &&
-      !e.ctrlKey && !e.metaKey && !e.altKey &&
-      !/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName || '')
-    ) {
-      this.cycleLayer();
-    }
   }
 
   /** Cycles dark -> light -> satellite -> dark. Bound to both the layer button and the "L" hotkey. */

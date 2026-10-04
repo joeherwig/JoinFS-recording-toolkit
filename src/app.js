@@ -1,9 +1,10 @@
 // App shell: wires the Store to <jfs-map>/<jfs-timeline>/<jfs-toolbar>, handles drag-and-drop
-// import and the global Ctrl+S save shortcut. See PLAN.md Step 1.
+// import and the global keyboard shortcuts. See PLAN.md Step 1.
 
 import { Store } from './store.js';
 import { initTheme, setTheme, getStoredTheme } from './theme.js';
 import { setLocale, resolveLocaleFromUrl } from './i18n.js';
+import { shortcuts } from './shortcuts.js';
 
 async function main() {
   initTheme();
@@ -46,21 +47,13 @@ async function main() {
     });
   }
 
-  window.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-      e.preventDefault();
-      toolbarEl.save();
-    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
-      e.preventDefault();
-      toolbarEl.openFiles();
-    } else if (
-      e.key === ' ' && !e.ctrlKey && !e.metaKey && !e.altKey &&
-      !/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName || '')
-    ) {
-      e.preventDefault(); // Space's default action is scrolling the page - not what we want here
-      timelineEl.togglePlay();
-    }
-  });
+  // Every global key goes through the shortcut registry (src/shortcuts.js), which ignores key presses
+  // in text-entry contexts - including inputs inside shadow roots such as the GPX converter form.
+  shortcuts.register({ id: 'save', key: 's', primary: true, allowInTyping: true, run: () => toolbarEl.save() });
+  shortcuts.register({ id: 'open', key: 'o', primary: true, allowInTyping: true, run: () => toolbarEl.openFiles() });
+  // Space's default action is scrolling the page - not what we want here, so it is prevented
+  shortcuts.register({ id: 'play-pause', key: ' ', run: () => timelineEl.togglePlay() });
+  shortcuts.attach(window);
 }
 
 main();
