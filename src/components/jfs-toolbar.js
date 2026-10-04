@@ -39,6 +39,8 @@ export class JfsToolbar extends HTMLElement {
       <span class="title">${t('app.title')}</span>
       <button id="importBtn" title="${t('toolbar.import')} (Ctrl+O)">${t('toolbar.import')}</button>
       <button id="saveBtn" title="${t('toolbar.save')} (Ctrl+S)">${t('toolbar.save')}</button>
+      <button id="undoBtn" title="${t('toolbar.undo')} (Ctrl+Z)" disabled>↶</button>
+      <button id="redoBtn" title="${t('toolbar.redo')} (Ctrl+Shift+Z)" disabled>↷</button>
       <select id="buildVariant" title="${t('toolbar.buildVariant.fs2024')}">
         <option value="fs2024" selected>${t('toolbar.buildVariant.fs2024')}</option>
         <option value="other">${t('toolbar.buildVariant.other')}</option>
@@ -59,6 +61,8 @@ export class JfsToolbar extends HTMLElement {
     this._root.getElementById('importBtn').addEventListener('click', () => this._doImport());
     this._root.getElementById('saveBtn').addEventListener('click', () => this._doSave());
     this._root.getElementById('clearSelectionBtn').addEventListener('click', () => this._store && this._store.clearSelection());
+    this._root.getElementById('undoBtn').addEventListener('click', () => this._store && this._store.undo());
+    this._root.getElementById('redoBtn').addEventListener('click', () => this._store && this._store.redo());
     this._root.getElementById('appTheme').addEventListener('change', (e) => {
       this.dispatchEvent(new CustomEvent('app-theme-changed', { detail: { theme: e.target.value } }));
     });
@@ -69,10 +73,17 @@ export class JfsToolbar extends HTMLElement {
 
   set store(store) {
     this._store = store;
+    store.addEventListener('history-changed', (e) => {
+      this._root.getElementById('undoBtn').disabled = !e.detail.canUndo;
+      this._root.getElementById('redoBtn').disabled = !e.detail.canRedo;
+    });
     store.addEventListener('selection-changed', () => {
       this._root.getElementById('clearSelectionBtn').hidden = !store.selectedTrackId;
     });
   }
+
+  /** Shows a short message in the warnings area (plugins use it through ctx.ui.toast). */
+  notify(message) { this._pushWarning(message); }
 
   setAppTheme(theme) { this._root.getElementById('appTheme').value = theme; }
 
@@ -111,7 +122,8 @@ export class JfsToolbar extends HTMLElement {
     const buildVariant = this._root.getElementById('buildVariant').value;
     try {
       for (const key of formats.lossWarnings('jfs-legacy', this._store.project)) this._pushWarning(t(key));
-      const bytes = exportProject(this._store.project, { formatId: 'jfs-legacy', buildVariant });
+      if (this.plugins) await this.plugins.activateForSave();
+      const bytes = exportProject(this._store.project, { formatId: 'jfs-legacy', buildVariant, transform: this.plugins ? (tracks) => this.plugins.applyExportTransforms(tracks) : undefined });
       await saveJfsFile(bytes, 'project.jfs');
     } catch (err) {
       this._pushWarning(`Save failed: ${err.message}`);
@@ -121,8 +133,14 @@ export class JfsToolbar extends HTMLElement {
   _pushWarning(message) {
     const el = document.createElement('div');
     el.className = 'warning';
-    el.innerHTML = `<span>${message}</span><button title="${t('warnings.dismiss')}">×</button>`;
-    el.querySelector('button').addEventListener('click', () => el.remove());
+    // textContent, not innerHTML: messages carry file names and plugin text
+    const text = document.createElement('span');
+    text.textContent = message;
+    const close = document.createElement('button');
+    close.title = t('warnings.dismiss');
+    close.textContent = '×';
+    close.addEventListener('click', () => el.remove());
+    el.append(text, close);
     this._warningsEl.appendChild(el);
     setTimeout(() => el.remove(), 15000);
   }

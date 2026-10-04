@@ -21,7 +21,7 @@ export function removeTrack(project, trackId) {
  * across the whole project is >= 0, then encodes the merged file with the chosen format (default: legacy .jfs, `{ buildVariant }` as option). Rebase happens only here, at
  * export time - not continuously during editing (PLAN.md Step 2).
  */
-export function exportProject(project, { formatId = 'jfs-legacy', ...options } = {}) {
+export function exportProject(project, { formatId = 'jfs-legacy', transform, ...options } = {}) {
   if (project.tracks.length === 0) throw new Error('Project has no tracks to export.');
 
   let minT = Infinity;
@@ -40,5 +40,6 @@ export function exportProject(project, { formatId = 'jfs-legacy', ...options } =
     return { ...track, frames: { ...track.frames, times } };
   });
 
-  return formats.encode(formatId, finalTracks, options);
+  // plugin export transforms (e.g. trim) run on the rebased copy, never on the live project
+  return formats.encode(formatId, transform ? transform(finalTracks) : finalTracks, options);
 }

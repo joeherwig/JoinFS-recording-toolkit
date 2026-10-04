@@ -6,6 +6,9 @@ import { initTheme, setTheme, getStoredTheme } from './theme.js';
 import { setLocale, resolveLocaleFromUrl } from './i18n.js';
 import { shortcuts } from './shortcuts.js';
 import { formats } from './formats/index.js';
+import { PluginHost } from './plugins/host.js';
+import { KNOWN_PLUGINS } from './plugins/known.js';
+import { t } from './i18n.js';
 
 async function main() {
   initTheme();
@@ -54,7 +57,43 @@ async function main() {
   shortcuts.register({ id: 'open', key: 'o', primary: true, allowInTyping: true, run: () => toolbarEl.openFiles() });
   // Space's default action is scrolling the page - not what we want here, so it is prevented
   shortcuts.register({ id: 'play-pause', key: ' ', run: () => timelineEl.togglePlay() });
+  shortcuts.register({ id: 'undo', key: 'z', primary: true, run: () => store.undo() });
+  shortcuts.register({ id: 'redo', key: 'z', primary: true, shift: true, run: () => store.redo() });
+  shortcuts.register({ id: 'redo-y', key: 'y', primary: true, run: () => store.redo() });
   shortcuts.attach(window);
+
+  startPlugins(store, toolbarEl);
+}
+
+/**
+ * Plugins load after the core is up and never block it: each known plugin is fetched and started on its own,
+ * and one that is missing or fails is just skipped (see src/plugins/host.js).
+ */
+async function startPlugins(store, toolbarEl) {
+  const baseUrl = new URL('../plugins/', import.meta.url).href;
+  const host = new PluginHost({
+    baseUrl,
+    fetchJson: async (url) => {
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    },
+    importModule: (url) => import(url),
+    storage: {
+      get: (k) => { try { return localStorage.getItem(`jfs-toolkit:${k}`); } catch { return null; } },
+      set: (k, v) => { try { localStorage.setItem(`jfs-toolkit:${k}`, v); } catch { /* storage unavailable */ } },
+    },
+    warn: (m) => console.warn(m),
+  }, {
+    formats, shortcuts,
+    getTracks: () => store.project.tracks,
+    exec: (command) => store.exec(command),
+    toast: (message) => toolbarEl.notify(message),
+    t,
+  });
+  toolbarEl.plugins = host;
+  window.jfsToolkit = { store, formats, plugins: host };
+  await host.loadAll(KNOWN_PLUGINS);
 }
 
 main();

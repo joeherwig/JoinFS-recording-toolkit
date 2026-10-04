@@ -3,8 +3,9 @@
 // through it and its events - never directly with each other.
 
 import { setTrackOffset, removeTrack as removeTrackFromProject } from './project-model.js';
+import { History } from './history.js';
 
-const EVENTS = ['tracks-changed', 'time-changed', 'playing-changed', 'selection-changed'];
+const EVENTS = ['tracks-changed', 'time-changed', 'playing-changed', 'selection-changed', 'history-changed'];
 
 export class Store extends EventTarget {
   constructor() {
@@ -17,6 +18,7 @@ export class Store extends EventTarget {
     this.mapTileTheme = 'dark';
     this.appTheme = 'auto';
     this.locale = 'en';
+    this.history = new History({ onChange: () => this._emit('history-changed', { canUndo: this.history.canUndo, canRedo: this.history.canRedo }) });
   }
 
   _emit(name, detail) {
@@ -28,15 +30,38 @@ export class Store extends EventTarget {
     this._emit('tracks-changed', { tracks: this.project.tracks });
   }
 
+  /** Runs an undoable command (`{ label, do(), undo() }`); the one way plugins and edits change the project. */
+  exec(command) { return this.history.exec(command); }
+  undo() { return this.history.undo(); }
+  redo() { return this.history.redo(); }
+
   setTrackOffset(trackId, offsetS) {
-    setTrackOffset(this.project, trackId, offsetS);
-    this._emit('tracks-changed', { tracks: this.project.tracks, offsetChangedTrackId: trackId });
+    const track = this.project.tracks.find((t) => t.id === trackId);
+    if (!track || track.timeOffsetS === offsetS) return;
+    const before = track.timeOffsetS;
+    const apply = (value) => {
+      setTrackOffset(this.project, trackId, value);
+      this._emit('tracks-changed', { tracks: this.project.tracks, offsetChangedTrackId: trackId });
+    };
+    this.exec({ label: 'Move track', do: () => apply(offsetS), undo: () => apply(before) });
   }
 
   removeTrack(trackId) {
-    removeTrackFromProject(this.project, trackId);
-    if (this.selectedTrackId === trackId) this.selectTrack(null);
-    this._emit('tracks-changed', { tracks: this.project.tracks });
+    const index = this.project.tracks.findIndex((t) => t.id === trackId);
+    if (index < 0) return;
+    const track = this.project.tracks[index];
+    this.exec({
+      label: 'Remove track',
+      do: () => {
+        removeTrackFromProject(this.project, trackId);
+        if (this.selectedTrackId === trackId) this.selectTrack(null);
+        this._emit('tracks-changed', { tracks: this.project.tracks });
+      },
+      undo: () => {
+        this.project.tracks.splice(Math.min(index, this.project.tracks.length), 0, track);
+        this._emit('tracks-changed', { tracks: this.project.tracks });
+      },
+    });
   }
 
   setTrackVisible(trackId, visible) {

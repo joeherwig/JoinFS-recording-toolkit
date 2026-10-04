@@ -48,3 +48,16 @@ test('exportProject rebases so the minimum effective frame time is ~0, offsets c
 test('exportProject throws on an empty project', () => {
   assert.throws(() => exportProject({ tracks: [] }));
 });
+
+test('exportProject applies export transforms to the rebased copy, not to the live project', () => {
+  const track = buildSyntheticTrack({ id: 'a', callsign: 'ALPHA', frameCount: 10 });
+  const project = { tracks: [track] };
+  let sawLive = null;
+  const bytes = exportProject(project, { buildVariant: 'other', transform: (tracks) => {
+    sawLive = tracks[0] === project.tracks[0];
+    return tracks.map((t) => ({ ...t, callsign: 'CHANGED' }));
+  } });
+  assert.equal(sawLive, false);
+  assert.equal(project.tracks[0].callsign, 'ALPHA');
+  assert.equal(decodeJfsFile(bytes.buffer).tracks[0].callsign, 'CHANGED');
+});

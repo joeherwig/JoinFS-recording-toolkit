@@ -18,5 +18,8 @@
   "timeline.speed": "Geschwindigkeit",
   "timeline.play": "Abspielen",
   "timeline.pause": "Pause",
-  "format.loss.staticCg": "Diese Datei nutzt das ältere Aufzeichnungslayout. Beim Speichern wird das aktuelle JoinFS-Layout geschrieben, das die statische Schwerpunkthöhe nicht speichert."
+  "format.loss.staticCg": "Diese Datei nutzt das ältere Aufzeichnungslayout. Beim Speichern wird das aktuelle JoinFS-Layout geschrieben, das die statische Schwerpunkthöhe nicht speichert.",
+  "plugins.failed": "Das Plugin „{name}“ ist fehlgeschlagen und wurde ausgeschaltet.",
+  "toolbar.undo": "Rückgängig",
+  "toolbar.redo": "Wiederholen"
 }
