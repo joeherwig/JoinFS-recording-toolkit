@@ -32,7 +32,7 @@ No installation and no build step: it is plain HTML and JavaScript. Your files n
 |---|---|
 | **Ctrl+O** | import (open) files; or drop them onto the map or timeline |
 | **Space** | play / pause |
-| **+** / **−** | zoom the timeline in / out |
+| **+** / **−** | zoom the map in / out |
 | **L** | cycle the map layer (dark, light, satellite) |
 | **Ctrl+Z** / **Ctrl+Shift+Z** | undo / redo |
 | **Ctrl+S** | save |

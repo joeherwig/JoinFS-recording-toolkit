@@ -24,7 +24,7 @@ pin and trim tracks, and saves one `.jfs` that current JoinFS replays.
 - **The timeline's 00:00 is where the file starts.** Moving a track so that part of it lies before 00:00 cuts that
   part on save (shown as cut in the views); moving it back restores it. Other tracks keep their timeline positions.
 - **Undo and redo** for every change (move, remove, pin, trim): Ctrl+Z, Ctrl+Shift+Z or Ctrl+Y, and toolbar buttons.
-- **Zoom hotkeys:** **+** and **−** (also on the number pad) zoom the timeline like its buttons.
+- **Zoom hotkeys:** **+** and **−** (also on the number pad) zoom the map like its buttons.
 - **Track menu** on right-click of a track row and on a ⋮ button in the timeline header, with icons supplied by the
   plugins.
 - **Formats are modules.** Import and save go through a formats registry that picks the format by content.

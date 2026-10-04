@@ -122,6 +122,10 @@ class JfsMap extends HTMLElement {
     this._unregisterKeys = [
       shortcuts.register({ id: 'map-clear-selection', key: 'Escape', preventDefault: false, run: () => { if (this._store) this._store.clearSelection(); } }),
       shortcuts.register({ id: 'map-cycle-layer', key: 'l', preventDefault: false, run: () => this.cycleLayer() }),
+      // + and - zoom the map ('=' and '_' are the unshifted/shifted partners on common keyboards, the number pad
+      // sends + and -); Ctrl/Cmd + and - stay with the browser's page zoom
+      ...['+', '='].map((key) => shortcuts.register({ id: `map-zoom-in${key}`, key, run: () => this.zoomIn() })),
+      ...['-', '_'].map((key) => shortcuts.register({ id: `map-zoom-out${key}`, key, run: () => this.zoomOut() })),
     ];
     const { L, css } = await loadLeaflet();
     this._L = L;
@@ -144,6 +148,10 @@ class JfsMap extends HTMLElement {
   }
 
   /** Cycles dark -> light -> satellite -> dark. Bound to both the layer button and the "L" hotkey. */
+  zoomIn() { if (this._map) this._map.zoomIn(); }
+
+  zoomOut() { if (this._map) this._map.zoomOut(); }
+
   cycleLayer() {
     const current = this.getAttribute('theme') || 'dark';
     const next = LAYER_ORDER[(LAYER_ORDER.indexOf(current) + 1) % LAYER_ORDER.length];

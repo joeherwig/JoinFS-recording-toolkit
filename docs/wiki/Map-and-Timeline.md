@@ -15,7 +15,7 @@
 - The map zooms to all tracks when you add or remove tracks, not on every change.
 - Positions at exactly 0/0 (some recordings have a placeholder before the first real fix) are ignored.
 
-Zoom with the wheel or the +/− buttons; drag to pan.
+Zoom with the wheel, the +/− buttons on the map or the **+** and **−** keys; drag to pan.
 
 ## Timeline
 
@@ -26,7 +26,7 @@ side is the chart.
 |---|---|
 | ▶ / **Space** | play and pause; at the end it jumps back to the start |
 | speed (0.5x … 50x) | playback speed |
-| − / + (or the **−** and **+** keys) | zoom the time axis |
+| − / + | zoom the time axis |
 | ⋮ | the track actions menu for the selected track (or the only track); see [Editing Tracks](Editing-Tracks) |
 | time readout | the playhead time |
 | ruler | click or drag to scrub the playhead |

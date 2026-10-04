@@ -8,7 +8,7 @@ On a Mac use Cmd instead of Ctrl.
 |---|---|
 | **Ctrl+O** | import (open) files |
 | **Space** | play / pause |
-| **+** / **−** | zoom the timeline in / out (the number-pad keys work too; Ctrl + and − still zoom the browser page) |
+| **+** / **−** | zoom the map in / out (the number-pad keys work too; Ctrl + and − still zoom the browser page) |
 | **L** | cycle the map layer (dark, light, satellite) |
 | **Ctrl+Z** | undo |
 | **Ctrl+Shift+Z**, **Ctrl+Y** | redo |
