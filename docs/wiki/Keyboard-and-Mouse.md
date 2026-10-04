@@ -6,16 +6,16 @@ On a Mac use Cmd instead of Ctrl.
 
 | Keys | Action |
 |---|---|
-| **Ctrl+O** | import files |
-| **Ctrl+S** | save |
+| **Ctrl+O** | import (open) files |
 | **Space** | play / pause |
+| **L** | cycle the map layer (dark, light, satellite) |
 | **Ctrl+Z** | undo |
 | **Ctrl+Shift+Z**, **Ctrl+Y** | redo |
-| **L** | cycle the map layer (dark, light, satellite) |
+| **Ctrl+S** | save |
 | **Esc** | close the open menu or dialog without applying; otherwise clear the selection |
 
 **Typing is never hijacked.** Shortcuts such as Space and L are ignored while you type in any field, including the
-fields inside the GPX converter dialog, and while a dialog is open. Ctrl+S and Ctrl+O still work in a field.
+fields inside the GPX converter dialog, and while a dialog is open. Ctrl+O and Ctrl+S still work in a field.
 Buttons and links keep Space and Enter for themselves.
 
 ### Esc order
