@@ -498,11 +498,12 @@ export class JfsTimeline extends HTMLElement {
     const alpha = dim ? 0.35 : 0.9;
 
     // only the part that will be saved is drawn (trim); the plugin layers below are not clipped
-    const range = this._store && this._store.visibleRange(track);
+    const range = this._store ? this._store.visibleRange(track, offsetOverride) : null;
     ctx.save();
     if (range) {
-      const cx0 = (range.startS + offsetOverride - visibleStart) * pps;
-      const cx1 = (range.endS + offsetOverride - visibleStart) * pps;
+      // an unbounded end (nothing trimmed there) is clipped at the canvas edge: rect() ignores non-finite values
+      const cx0 = Math.max(-1, (range.startS + offsetOverride - visibleStart) * pps);
+      const cx1 = Number.isFinite(range.endS) ? (range.endS + offsetOverride - visibleStart) * pps : canvasWidth + 1;
       ctx.beginPath();
       ctx.rect(cx0, rowTop, Math.max(0, cx1 - cx0), ROW_HEIGHT);
       ctx.clip();

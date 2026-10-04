@@ -2,8 +2,6 @@
 // recording); the timeline shades what will be cut, and the export transform removes it when saving. Editing runs
 // in a non-modal dialog: the draft changes freely, Cancel throws it away, Apply is one undoable command.
 
-import { trimTrack } from './trim.js';
-
 const EPS = 1e-6;
 const round1 = (x) => Math.round(x * 10) / 10;
 
@@ -54,7 +52,7 @@ export function activate(ctx) {
       .map((tr) => {
         const trim = tr.ext && tr.ext.trim;
         // the export copies already carry project time (offset applied); the trim is stored in source time
-        return trim ? trimTrack(tr, trim.startS + tr.timeOffsetS, trim.endS + tr.timeOffsetS) : tr;
+        return trim ? ctx.tracks.clip(tr, trim.startS + tr.timeOffsetS, trim.endS + tr.timeOffsetS) : tr;
       })
       .filter(Boolean),
   });

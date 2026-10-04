@@ -3,6 +3,7 @@
 // .jfs file IS the resume-editing workflow (see REQUIREMENTS.md).
 
 import { formats } from './formats/index.js';
+import { clipTrack } from './track-clip.js';
 
 /** Sets a track's cumulative time offset (does not touch frame data - see PLAN.md Step 2). */
 export function setTrackOffset(project, trackId, offsetS) {
@@ -31,6 +32,14 @@ export function exportProject(project, { formatId = 'jfs-legacy', transform, ...
     for (let i = 0; i < times.length; i++) times[i] = track.frames.times[i] + track.timeOffsetS;
     return { ...track, frames: { ...track.frames, times } };
   });
+  // what lies before the timeline's 00:00 is not saved (the views show it as cut); a track moved back to the right
+  // simply has nothing before 00:00 any more
+  tracks = tracks.map((track) => {
+    const times = track.frames.times;
+    let min = Infinity;
+    for (let i = 0; i < times.length; i++) if (times[i] < min) min = times[i];
+    return min < 0 ? clipTrack(track, 0, Infinity) : track;
+  }).filter(Boolean);
   if (transform) tracks = transform(tracks);
 
   let minT = Infinity;

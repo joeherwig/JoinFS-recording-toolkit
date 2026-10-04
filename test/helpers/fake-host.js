@@ -24,6 +24,7 @@ export async function loadPlugin(id, { tracks = [], locale = 'en', storage = {} 
     baseUrl: PLUGINS_DIR.href,
     locale,
     fetchJson: async (url) => JSON.parse(fs.readFileSync(fileURLToPath(url), 'utf8')),
+    fetchText: async (url) => fs.readFileSync(fileURLToPath(url), 'utf8'),
     importModule: (url) => import(url),
     storage: { get: (k) => storage[k] ?? null, set: (k, v) => { storage[k] = v; } },
     warn: (m) => warnings.push(m),

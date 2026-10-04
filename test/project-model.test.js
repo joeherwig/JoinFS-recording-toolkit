@@ -24,25 +24,25 @@ test('removeTrack splices the track out; a missing id is a no-op', () => {
   assert.equal(project.tracks.length, 1);
 });
 
-test('exportProject rebases so the minimum effective frame time is ~0, offsets combine correctly, aircraftCount reflects remaining tracks', () => {
-  const a = buildSyntheticTrack({ id: 'a', callsign: 'ALPHA', frameCount: 10 });
+test('exportProject keeps the timeline positions, cuts what lies before 00:00 and drops tracks that lie entirely before it', () => {
+  const a = buildSyntheticTrack({ id: 'a', callsign: 'ALPHA', frameCount: 10 }); // frames at 0 .. 0.45 s
   const b = buildSyntheticTrack({ id: 'b', callsign: 'BRAVO', frameCount: 10 });
-  const project = { tracks: [a, b] };
-  setTrackOffset(project, 'a', -100); // push track a's effective start well before 0
+  const gone = buildSyntheticTrack({ id: 'c', callsign: 'CHARLIE', frameCount: 10 });
+  const project = { tracks: [a, b, gone] };
+  setTrackOffset(project, 'a', -0.2); // its first four frames (0, .05, .1, .15) lie before 00:00
   setTrackOffset(project, 'b', 50);
+  setTrackOffset(project, 'c', -100); // entirely before 00:00
 
   const bytes = exportProject(project, { buildVariant: 'other' });
   const { tracks } = decodeJfsFile(bytes.buffer);
-  assert.equal(tracks.length, 2);
+  assert.deepEqual(tracks.map((t) => t.callsign).sort(), ['ALPHA', 'BRAVO']);
 
-  let minEffective = Infinity;
-  for (const t of tracks) for (const time of t.frames.times) if (time < minEffective) minEffective = time;
-  assert.ok(Math.abs(minEffective) < 1e-6, `expected rebased minimum time ~0, got ${minEffective}`);
-
-  // track b's frames should still be 150 (offset 50 + rebase 100) seconds ahead of track a's
-  const bStart = tracks.find((t) => t.callsign === 'BRAVO').frames.times[0];
-  const aStart = tracks.find((t) => t.callsign === 'ALPHA').frames.times[0];
-  assert.ok(Math.abs((bStart - aStart) - 150) < 1e-6);
+  const alpha = tracks.find((t) => t.callsign === 'ALPHA').frames.times;
+  const bravo = tracks.find((t) => t.callsign === 'BRAVO').frames.times;
+  assert.equal(alpha.length, 6, 'four frames cut, six kept');
+  assert.ok(Math.abs(alpha[0]) < 1e-9 && Math.abs(alpha[1] - 0.05) < 1e-9, 'kept frames keep their timeline position (0.2 - 0.2 = 0)');
+  assert.ok(Math.abs(bravo[0] - 50) < 1e-9, 'a track that starts later keeps its lead-in');
+  assert.equal(a.frames.times.length, 10, 'the live project is untouched');
 });
 
 test('exportProject throws on an empty project', () => {

@@ -79,6 +79,11 @@ async function startPlugins(store, toolbarEl) {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return r.json();
     },
+    fetchText: async (url) => {
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.text();
+    },
     importModule: (url) => import(url),
     storage: {
       get: (k) => { try { return localStorage.getItem(`jfs-toolkit:${k}`); } catch { return null; } },

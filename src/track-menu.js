@@ -10,13 +10,34 @@ const CSS = `
     background: var(--panel-bg, #12141a); color: var(--fg, #e2e8f0); border: 1px solid var(--border, #262b36);
     border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.4); font: 13px system-ui, sans-serif; }
   .jfs-track-menu .head { padding: 6px 10px; color: var(--muted, #6b7280); font-size: 12px; }
-  .jfs-track-menu button { display: block; width: 100%; min-height: 44px; padding: 0 12px; text-align: left; border: none;
+  .jfs-track-menu button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 12px; text-align: left; border: none;
     border-radius: 6px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
   .jfs-track-menu button:hover, .jfs-track-menu button:focus-visible { background: var(--btn-bg-hover, #2d3748); outline: none; }
+  .jfs-track-menu button svg { width: 20px; height: 20px; flex: none; }
   .jfs-track-menu .empty { padding: 10px 12px; color: var(--muted, #6b7280); }
 `;
 
 let openMenu = null;
+
+/**
+ * Turns a plugin's SVG text into an element for the menu. Only plain drawing markup survives: scripts, foreign
+ * content, event handlers and links are removed, and the icon takes its colour from the menu text.
+ */
+export function svgIcon(text) {
+  if (!text) return null;
+  const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
+  const svg = doc.documentElement;
+  if (!svg || svg.localName !== 'svg' || doc.getElementsByTagName('parsererror').length) return null;
+  for (const el of [...svg.querySelectorAll('script, foreignObject, style, a, image, use')]) el.remove();
+  for (const el of [svg, ...svg.querySelectorAll('*')]) {
+    for (const attr of [...el.attributes]) {
+      if (/^on/i.test(attr.name) || /javascript:/i.test(attr.value) || /^(xlink:)?href$/i.test(attr.name)) el.removeAttribute(attr.name);
+    }
+  }
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+  return document.importNode(svg, true);
+}
 
 export function closeTrackMenu() {
   if (!openMenu) return;
@@ -61,7 +82,11 @@ export function showTrackMenu({ store, trackId, x = 0, y = 0, anchor = null, res
     const item = document.createElement('button');
     item.type = 'button';
     item.setAttribute('role', 'menuitem');
-    item.textContent = a.text;
+    const icon = svgIcon(a.iconSvg);
+    if (icon) item.appendChild(icon);
+    const label = document.createElement('span');
+    label.textContent = a.text;
+    item.appendChild(label);
     item.addEventListener('click', () => {
       openMenu.restoreFocus = null; // the action decides where the focus goes
       closeTrackMenu();

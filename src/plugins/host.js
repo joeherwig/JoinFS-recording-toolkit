@@ -3,6 +3,8 @@
 // and never takes the app or other plugins down. All environment access (fetch, import, storage, app services)
 // is injected, so the host runs unchanged under node --test with a fake environment.
 
+import { clipTrack } from '../track-clip.js';
+
 export const API_VERSION = 1;
 const ACTIVATIONS = new Set(['onStartup', 'onAction', 'onTrackLoad']);
 
@@ -19,7 +21,7 @@ export function validateManifest(m, expectedId) {
 
 export class PluginHost {
   /**
-   * env: { baseUrl, locale, fetchJson(url), importModule(url), storage: {get(key), set(key, value)}, warn(message) }
+   * env: { baseUrl, locale, fetchJson(url), fetchText(url), importModule(url), storage: {get(key), set(key, value)}, warn(message) }
    * services: { formats, shortcuts, getTracks(), exec(command), toast(message), t(key, params), addMessages(prefix, dict),
    *   addDragGuard(fn), addRangeProvider(fn), addTimelineLayer(layer), requestRedraw(), openDialog(spec), getTime(), setTime(s), getSelectedId() }
    */
@@ -51,6 +53,7 @@ export class PluginHost {
     const problems = validateManifest(entry.manifest, id);
     if (problems.length) return this._fail(entry, problems.join('; '));
     await this._loadLocales(entry);
+    await this._loadIcons(entry);
     const defaultEnabled = entry.manifest.defaultEnabled !== false;
     const stored = this._readEnabled(id);
     entry.enabled = stored === null ? defaultEnabled : stored;
@@ -74,6 +77,19 @@ export class PluginHost {
     if (this._services.addMessages) this._services.addMessages(`plugin.${entry.id}.`, dict);
   }
 
+  /** Menu icons are small SVG files in the plugin folder, named by the manifest (`icon` of a track action). */
+  async _loadIcons(entry) {
+    const actions = ((entry.manifest.contributes || {}).trackActions || []).filter((a) => a.icon);
+    entry.icons = {};
+    if (!this._env.fetchText) return;
+    for (const a of actions) {
+      const url = new URL(`${entry.id}/${a.icon}`, this._env.baseUrl).href;
+      try { entry.icons[a.id] = await this._env.fetchText(url); } catch (err) {
+        this._env.warn(`Plugin "${entry.id}": icon ${url} not loaded (${err.message}).`);
+      }
+    }
+  }
+
   _fail(entry, reason) {
     entry.state = 'unavailable';
     entry.reason = reason;
@@ -85,7 +101,7 @@ export class PluginHost {
   /** Manifest-declared contributions are visible before (and without) loading the plugin's code. */
   _declare(entry) {
     const c = (entry.manifest && entry.manifest.contributes) || {};
-    for (const a of c.trackActions || []) this._trackActions.push({ ...a, pluginId: entry.id, declared: true });
+    for (const a of c.trackActions || []) this._trackActions.push({ ...a, iconSvg: (entry.icons || {})[a.id], pluginId: entry.id, declared: true });
   }
 
   // ---- activation --------------------------------------------------------------------------------------
@@ -192,6 +208,8 @@ export class PluginHost {
       id: entry.id,
       apiVersion: API_VERSION,
       tracks: Object.freeze({
+        /** Copy of a track cut to [startS, endS] (track time as given), with the variable state seeded; null if nothing is left. */
+        clip: (track, startS, endS) => clipTrack(track, startS, endS),
         registerDragGuard: (fn) => own(s.addDragGuard(guard(fn))),
         /** fn(track) -> { startS, endS } (track time) | null: the part of the track to show and save. */
         registerRange: (fn) => own(s.addRangeProvider(guard(fn))),
@@ -226,7 +244,8 @@ export class PluginHost {
         registerTrackAction: (spec) => {
           // replaces the manifest-declared placeholder with the live action
           this._trackActions = this._trackActions.filter((a) => !(a.pluginId === entry.id && a.id === spec.id));
-          const action = { ...spec, pluginId: entry.id, run: guard(spec.run) };
+          const declared = (entry.icons || {})[spec.id];
+          const action = { ...spec, iconSvg: declared, pluginId: entry.id, run: guard(spec.run) };
           this._trackActions.push(action);
           return own(() => { this._trackActions = this._trackActions.filter((a) => a !== action); });
         },

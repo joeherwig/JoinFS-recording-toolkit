@@ -38,3 +38,9 @@ test('pin: disabling the plugin removes its guard and layer', async () => {
   assert.equal(h.guards.size, 0);
   assert.equal(h.layers.size, 0);
 });
+
+test('pin: the menu entry carries its SVG icon before the plugin code is activated', async () => {
+  const h = await loadPlugin('pin', { tracks: [makeTrack()] });
+  assert.match(h.host.trackActions()[0].iconSvg, /^<svg[\s\S]*<\/svg>\s*$/);
+  assert.deepEqual(h.warnings, []);
+});

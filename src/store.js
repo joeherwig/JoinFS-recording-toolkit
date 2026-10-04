@@ -56,16 +56,17 @@ export class Store extends EventTarget {
   }
 
   /**
-   * The part of a track that is shown (and will be saved), in the track's own time: { startS, endS } or null for
-   * "all of it". Plugins (trim) contribute through addRangeProvider; several providers intersect.
+   * The part of a track that is shown (and will be saved), in the track's own time: { startS, endS }. Always starts
+   * at the timeline's 00:00; plugins (trim) narrow it further through addRangeProvider (providers intersect).
    */
-  visibleRange(track) {
-    let range = null;
+  visibleRange(track, offsetS = track.timeOffsetS) {
+    // nothing before the timeline's 00:00 is saved, so nothing before it is shown: track time -offsetS is that point
+    let range = { startS: -offsetS, endS: Infinity };
     for (const provider of this.rangeProviders) {
       let r = null;
       try { r = provider(track); } catch (err) { console.warn('Range provider failed:', err); }
       if (!r) continue;
-      range = range ? { startS: Math.max(range.startS, r.startS), endS: Math.min(range.endS, r.endS) } : { startS: r.startS, endS: r.endS };
+      range = { startS: Math.max(range.startS, r.startS), endS: Math.min(range.endS, r.endS) };
     }
     return range;
   }

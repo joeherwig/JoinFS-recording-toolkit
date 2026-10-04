@@ -1,9 +1,8 @@
-// Trim: the pure part. Cuts a track (times already in project time) to [startS, endS] and keeps the state that the
-// cut-off beginning had established: JoinFS replays gear, flaps, lights and strings from variable frames that are
-// only written when something changes, so a plain cut would start the replay with every system in its default
-// state. The last value of every variable seen before the new start is therefore written again as one seed frame
-// per kind at the new start. The few frame formats needed are parsed here on purpose: plugins do not import core
-// modules (PLAN-v2.md §3).
+// Clipping a track to a time range [startS, endS] (times in project time). Used by the export for everything that
+// lies before the timeline's 00:00 and exposed to plugins as `ctx.tracks.clip` (trim). JoinFS replays gear, flaps,
+// lights and strings from variable frames that are only written when something changes, so a plain cut would start
+// the replay with every system in its default state. The last value of every variable seen before the new start is
+// therefore written again as one seed frame per kind at the new start.
 
 const INTEGER_VARIABLES = 11;
 const FLOAT_VARIABLES = 12;
@@ -64,7 +63,7 @@ export function buildVariableFrame(type, entries) {
  * Returns a new track holding only the frames with startS <= time <= endS, preceded by the seed frames.
  * Returns null when no frame is left. The input track is not modified.
  */
-export function trimTrack(track, startS, endS) {
+export function clipTrack(track, startS, endS) {
   const f = track.frames;
   const n = f.times.length;
   const last = { [INTEGER_VARIABLES]: new Map(), [FLOAT_VARIABLES]: new Map(), [STRING8_VARIABLES]: new Map() };

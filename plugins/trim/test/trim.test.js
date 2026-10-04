@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadPlugin, makeTrack } from '../../../test/helpers/fake-host.js';
-import { trimTrack, parseVariableFrame, buildVariableFrame } from '../trim.js';
+import { clipTrack as trimTrack, parseVariableFrame, buildVariableFrame } from '../../../src/track-clip.js';
 import { exportProject } from '../../../src/project-model.js';
 import { decodeJfsFile } from '../../../src/jfs-codec.js';
 
