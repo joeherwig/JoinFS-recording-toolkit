@@ -1,9 +1,8 @@
-// Regenerates the golden .jfs fixtures: `node test/fixtures/make-fixtures.js`. The committed bytes pin the
-// two legacy layouts and both tail families; test/fixtures.test.js fails if the encoder drifts from them.
-import { writeFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+// Builders for the golden .jfs fixtures in test/fixtures/ (regenerate them with `node tools/make-fixtures.js`).
+// The committed bytes pin the two legacy layouts and both tail families; test/fixtures.test.js fails if the encoder
+// drifts from them. This module has no side effects: node --test runs every file under test/ as a test file.
 import { encodeJfsFile, LAYOUT } from '../../src/jfs-codec.js';
-import { buildSyntheticTrack } from '../helpers/jfs-samples.js';
+import { buildSyntheticTrack } from './jfs-samples.js';
 
 export const FIXTURES = {
   'current-fs2024.jfs': { layout: LAYOUT.CURRENT, buildVariant: 'fs2024', livery: true },
@@ -18,9 +17,3 @@ export function buildFixture({ layout, buildVariant, livery = false }) {
   return encodeJfsFile([track], { buildVariant, layout });
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  for (const [name, o] of Object.entries(FIXTURES)) {
-    const dir = fileURLToPath(new URL('.', import.meta.url));
-    writeFileSync(dir + name, buildFixture(o));
-  }
-}

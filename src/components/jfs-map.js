@@ -209,14 +209,22 @@ class JfsMap extends HTMLElement {
 
       // (re)build runs only if we haven't yet, or the track's frame count changed (not on a pure
       // time-offset change - positions haven't moved, see PLAN.md Step 4).
-      if (entry.frameCount !== track.frames.times.length) {
+      const range = this._store.visibleRange(track);
+      const rangeKey = range ? `${range.startS}:${range.endS}` : '';
+      entry.range = range;
+      if (entry.frameCount !== track.frames.times.length || entry.rangeKey !== rangeKey) {
         entry.group.clearLayers();
         entry.runLayers = [];
+        entry.icon = null; // clearLayers() removed the arrow and the markers; they are rebuilt below
+        entry.eventMarkers = null;
+        entry.iconHidden = false;
+        entry.rangeKey = rangeKey;
         const idx = decimateStride(track.frames, 20000)
           // Exact (0,0) is a placeholder/missing fix some real recordings contain (e.g. an aircraft
           // armed for recording before the simulator delivered a first position) - including it
           // would drag the polyline/bounds out to "Null Island" ("crap on showing" - reported bug).
-          .filter((i) => isValidLatLon(track.frames.lat[i], track.frames.lon[i]));
+          .filter((i) => isValidLatLon(track.frames.lat[i], track.frames.lon[i]))
+          .filter((i) => !range || (track.frames.times[i] >= range.startS && track.frames.times[i] <= range.endS));
         const mapTheme = this.getAttribute('theme') || 'dark';
         const points = idx.map((i) => {
           const altFt = track.frames.alt[i] * 3.28084;
@@ -261,7 +269,7 @@ class JfsMap extends HTMLElement {
       // unlike the playhead arrow these only need building once, not on every time-changed tick -
       // rebuilding ~1000s of circleMarkers up to 60x/s during playback would be a real perf problem.
       if (!entry.eventMarkers) {
-        entry.eventMarkers = entry.posSeries ? (track.events || []).map((evt) => {
+        entry.eventMarkers = entry.posSeries ? (track.events || []).filter((evt) => !range || (evt.timeS >= range.startS && evt.timeS <= range.endS)).map((evt) => {
           const pos = interpolatePosition(entry.posSeries, evt.timeS);
           const marker = L.circleMarker([pos.lat, pos.lon], { radius: 4, color: '#fff', weight: 1, fillColor: '#111827', fillOpacity: 0.9 });
           marker.bindTooltip(`<span class="jfs-event-tooltip">${evt.label}</span>`);
@@ -333,6 +341,13 @@ class JfsMap extends HTMLElement {
       if (!entry || !entry.icon || !track.visible || !entry.posSeries) continue;
       if (track.frames.times.length === 0) continue;
       const localT = t - track.timeOffsetS;
+      // outside the part that will be saved the aircraft is not shown
+      const inRange = !entry.range || (localT >= entry.range.startS && localT <= entry.range.endS);
+      if (inRange !== !entry.iconHidden) {
+        entry.iconHidden = !inRange;
+        if (inRange) entry.group.addLayer(entry.icon); else entry.group.removeLayer(entry.icon);
+      }
+      if (!inRange) continue;
       const pos = interpolatePosition(entry.posSeries, localT);
       // Skip repositioning on a degenerate (0,0) frame - see the Null Island note in _renderTracks -
       // rather than jumping the marker out to the middle of the ocean; it just holds its last

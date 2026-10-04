@@ -64,7 +64,7 @@ test('trim plugin: edit mode opens a bar, apply is undoable, cancel changes noth
   assert.equal(h.host.trackActions()[0].text, 'Spur kürzen…');
 
   await h.host.runTrackAction('trim', 'edit', 't1');
-  let bar = h.lastModeBar();
+  let bar = h.lastDialog();
   assert.deepEqual(bar.values, { start: 0, end: 10 });
 
   h.state.time = 103; // project time = frame time + offset
@@ -83,7 +83,7 @@ test('trim plugin: edit mode opens a bar, apply is undoable, cancel changes noth
   assert.ok(track.ext.trim);
 
   await h.host.runTrackAction('trim', 'edit', 't1');
-  bar = h.lastModeBar();
+  bar = h.lastDialog();
   bar.spec.onChange({ start: 5, end: 6 });
   bar.spec.onButton('cancel');
   assert.deepEqual(track.ext.trim, { startS: 103, endS: 108 }, 'cancel keeps the applied trim');
@@ -93,7 +93,7 @@ test('trim plugin: an inverted range is refused, a full range clears the trim, t
   const track = makeTrack({ frames: 11, t0: 100 });
   const h = await loadPlugin('trim', { tracks: [track] });
   await h.host.runTrackAction('trim', 'edit', 't1');
-  const bar = h.lastModeBar();
+  const bar = h.lastDialog();
   bar.spec.onChange({ start: 7, end: 4 });
   bar.spec.onButton('apply');
   assert.match(h.toasts.at(-1), /before the end/);
@@ -118,7 +118,7 @@ test('trim export: cut parts are gone, the file starts at 0 and decodes, other t
   a.timeOffsetS = 20; // moved in the timeline: the trim range follows the track
   const h = await loadPlugin('trim', { tracks: [a, b] });
   await h.host.runTrackAction('trim', 'edit', 'a');
-  const bar = h.lastModeBar();
+  const bar = h.lastDialog();
   bar.spec.onChange({ start: 5, end: 8 });
   bar.spec.onButton('apply');
 
@@ -131,4 +131,24 @@ test('trim export: cut parts are gone, the file starts at 0 and decodes, other t
   assert.equal(Math.min(...tb.frames.times), 0);
   assert.equal(ta.frames.times[0], 25);
   assert.equal(a.frames.times.length, 14, 'the live project is untouched');
+});
+
+test('trim plugin: the views show the track as it will be saved (draft while editing, applied trim afterwards)', async () => {
+  const track = makeTrack({ frames: 11, t0: 100 });
+  const h = await loadPlugin('trim', { tracks: [track] });
+  await h.host.runTrackAction('trim', 'edit', 't1');
+  assert.deepEqual(h.rangeOf(track), { startS: 100, endS: 110 }, 'the draft starts as the full range');
+  const dlg = h.lastDialog();
+  dlg.spec.onChange({ start: 2, end: 6 });
+  assert.deepEqual(h.rangeOf(track), { startS: 102, endS: 106 });
+  dlg.spec.onButton('cancel');
+  assert.equal(h.rangeOf(track), null, 'cancel: back to the whole track');
+
+  await h.host.runTrackAction('trim', 'edit', 't1');
+  const dlg2 = h.lastDialog();
+  dlg2.spec.onChange({ start: 2, end: 6 });
+  dlg2.spec.onButton('apply');
+  assert.deepEqual(h.rangeOf(track), { startS: 102, endS: 106 });
+  h.history.undo();
+  assert.equal(h.rangeOf(track), null);
 });

@@ -1,5 +1,5 @@
 // Runs a first-party plugin folder under node --test: a real PluginHost reading `plugins/<id>/` from disk, with
-// the app services replaced by recorders (drag guards, timeline layers, mode bars, executed commands).
+// the app services replaced by recorders (drag guards, timeline layers, dialogs, executed commands).
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { PluginHost } from '../../src/plugins/host.js';
@@ -14,7 +14,8 @@ export async function loadPlugin(id, { tracks = [], locale = 'en', storage = {} 
   const toasts = [];
   const guards = new Set();
   const layers = new Set();
-  const modeBars = [];
+  const ranges = new Set();
+  const dialogs = [];
   const messages = {};
   const redraws = { count: 0 };
   const state = { time: 0, selected: tracks[0] ? tracks[0].id : null };
@@ -35,12 +36,13 @@ export async function loadPlugin(id, { tracks = [], locale = 'en', storage = {} 
     t: (k, p) => { let s = messages[k] ?? k; for (const [a, b] of Object.entries(p || {})) s = s.replaceAll(`{${a}}`, b); return s; },
     addMessages: (prefix, dict) => { for (const [k, v] of Object.entries(dict)) messages[prefix + k] = v; },
     addDragGuard: (fn) => { guards.add(fn); return () => guards.delete(fn); },
+    addRangeProvider: (fn) => { ranges.add(fn); return () => ranges.delete(fn); },
     addTimelineLayer: (layer) => { layers.add(layer); return () => layers.delete(layer); },
     requestRedraw: () => { redraws.count++; },
-    openModeBar: (spec) => {
+    openDialog: (spec) => {
       const bar = { spec, closed: false, values: {}, setValues(v) { Object.assign(this.values, v); }, close() { this.closed = true; } };
       for (const f of spec.fields || []) bar.values[f.id] = f.value;
-      modeBars.push(bar);
+      dialogs.push(bar);
       return bar;
     },
     getTime: () => state.time,
@@ -50,9 +52,10 @@ export async function loadPlugin(id, { tracks = [], locale = 'en', storage = {} 
   const host = new PluginHost(env, services);
   await host.loadAll([id]);
   return {
-    host, history, redraws, warnings, toasts, guards, layers, modeBars, state, messages, tracks,
+    host, history, redraws, warnings, toasts, guards, layers, ranges, dialogs, state, messages, tracks,
+    rangeOf: (track) => { for (const r of ranges) { const v = r(track); if (v) return v; } return null; },
     canDrag: (track) => [...guards].every((g) => g(track) !== false),
-    lastModeBar: () => modeBars[modeBars.length - 1],
+    lastDialog: () => dialogs[dialogs.length - 1],
     status: () => host.status().find((p) => p.id === id),
   };
 }

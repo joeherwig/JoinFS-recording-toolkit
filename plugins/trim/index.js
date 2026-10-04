@@ -1,6 +1,6 @@
 // Trim: non-destructive. The chosen range lives in `track.ext.trim = { startS, endS }` (source time of the
 // recording); the timeline shades what will be cut, and the export transform removes it when saving. Editing runs
-// in a non-modal mode bar: the draft changes freely, Cancel throws it away, Apply is one undoable command.
+// in a non-modal dialog: the draft changes freely, Cancel throws it away, Apply is one undoable command.
 
 import { trimTrack } from './trim.js';
 
@@ -17,7 +17,10 @@ function bounds(track) {
 export function activate(ctx) {
   let session = null; // { trackId, t0, t1, draft: { startS, endS }, bar }
 
+  // what the views show: the draft while editing, else the applied trim. Both show the track as it will be saved.
   const trimOf = (track) => (session && session.trackId === track.id ? session.draft : track.ext && track.ext.trim);
+
+  ctx.tracks.registerRange((track) => trimOf(track) || null);
 
   function endSession() {
     if (!session) return;
@@ -28,8 +31,9 @@ export function activate(ctx) {
 
   ctx.ui.registerTimelineLayer({
     draw(g, { track, top, height, width, toX }) {
-      const trim = trimOf(track);
-      if (!trim) return;
+      // the cut parts are not drawn at all; while editing, they are hinted in grey with the new borders marked
+      if (!session || session.trackId !== track.id) return;
+      const trim = session.draft;
       const x0 = toX(trim.startS), x1 = toX(trim.endS);
       g.fillStyle = 'rgba(127,127,127,.5)'; // neutral grey: readable on the light and the dark theme
       if (x0 > 0) g.fillRect(0, top, Math.min(x0, width), height);
@@ -68,7 +72,7 @@ export function activate(ctx) {
       const clamp = (rel) => Math.min(Math.max(rel, 0), dur);
       const toRel = (src) => round1(src - t0);
 
-      const bar = ctx.ui.openModeBar({
+      const bar = ctx.ui.openDialog({
         title: ctx.i18n.t('bar.title', { name: track.callsign || track.id }),
         fields: [
           { id: 'start', label: ctx.i18n.t('field.start'), value: toRel(current.startS), step: 0.1, min: 0 },
@@ -126,4 +130,4 @@ export function activate(ctx) {
   }
 }
 
-export function deactivate() { /* the host disposes the layer, transform and mode bar */ }
+export function deactivate() { /* the host disposes the layer, transform and dialog */ }

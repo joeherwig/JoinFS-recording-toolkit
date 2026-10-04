@@ -19,6 +19,8 @@ export class Store extends EventTarget {
     this.appTheme = 'auto';
     this.locale = 'en';
     // Plugin contributions (PLAN-v2.md §3.5): drag vetoes and timeline layers are registered through the plugin host
+    this.plugins = null; // the PluginHost, set by the app once created
+    this.rangeProviders = new Set();
     this.dragGuards = new Set();
     this.timelineLayers = new Set();
     this.history = new History({
@@ -51,6 +53,27 @@ export class Store extends EventTarget {
       try { if (guard(track) === false) return false; } catch (err) { console.warn('Drag guard failed:', err); }
     }
     return true;
+  }
+
+  /**
+   * The part of a track that is shown (and will be saved), in the track's own time: { startS, endS } or null for
+   * "all of it". Plugins (trim) contribute through addRangeProvider; several providers intersect.
+   */
+  visibleRange(track) {
+    let range = null;
+    for (const provider of this.rangeProviders) {
+      let r = null;
+      try { r = provider(track); } catch (err) { console.warn('Range provider failed:', err); }
+      if (!r) continue;
+      range = range ? { startS: Math.max(range.startS, r.startS), endS: Math.min(range.endS, r.endS) } : { startS: r.startS, endS: r.endS };
+    }
+    return range;
+  }
+
+  addRangeProvider(fn) {
+    this.rangeProviders.add(fn);
+    this.requestRedraw();
+    return () => { this.rangeProviders.delete(fn); this.requestRedraw(); };
   }
 
   addDragGuard(guard) { this.dragGuards.add(guard); return () => this.dragGuards.delete(guard); }
@@ -107,8 +130,9 @@ export class Store extends EventTarget {
     this._emit('tracks-changed', { tracks: this.project.tracks });
   }
 
-  selectTrack(trackId) {
-    const next = this.selectedTrackId === trackId ? null : trackId;
+  /** Selects a track; clicking the selected one again clears it, unless `toggle` is false (context menu). */
+  selectTrack(trackId, { toggle = true } = {}) {
+    const next = toggle && this.selectedTrackId === trackId ? null : trackId;
     this.selectedTrackId = next;
     this._emit('selection-changed', { selectedTrackId: next });
   }

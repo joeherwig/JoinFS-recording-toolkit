@@ -92,14 +92,16 @@ async function startPlugins(store, toolbarEl) {
     toast: (message) => toolbarEl.notify(message),
     t, addMessages,
     addDragGuard: (fn) => store.addDragGuard(fn),
+    addRangeProvider: (fn) => store.addRangeProvider(fn),
     addTimelineLayer: (layer) => store.addTimelineLayer(layer),
     requestRedraw: () => store.requestRedraw(),
-    openModeBar: (spec) => toolbarEl.openModeBar(spec),
+    openDialog: (spec) => toolbarEl.openDialog(spec),
     getTime: () => store.currentTimeS,
     setTime: (seconds) => store.setCurrentTime(seconds),
     getSelectedId: () => store.selectedTrackId,
   });
   toolbarEl.plugins = host;
+  store.plugins = host;
   window.jfsToolkit = { store, formats, plugins: host };
   await host.loadAll(KNOWN_PLUGINS);
 }

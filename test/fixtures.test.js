@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { decodeJfsFile, encodeJfsFile, LAYOUT } from '../src/jfs-codec.js';
-import { FIXTURES, buildFixture } from './fixtures/make-fixtures.js';
+import { FIXTURES, buildFixture } from './helpers/fixture-builders.js';
 
 const read = (name) => new Uint8Array(readFileSync(new URL(`./fixtures/${name}`, import.meta.url)));
 const ab = (u8) => u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);

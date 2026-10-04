@@ -21,7 +21,7 @@ export class PluginHost {
   /**
    * env: { baseUrl, locale, fetchJson(url), importModule(url), storage: {get(key), set(key, value)}, warn(message) }
    * services: { formats, shortcuts, getTracks(), exec(command), toast(message), t(key, params), addMessages(prefix, dict),
-   *   addDragGuard(fn), addTimelineLayer(layer), requestRedraw(), openModeBar(spec), getTime(), setTime(s), getSelectedId() }
+   *   addDragGuard(fn), addRangeProvider(fn), addTimelineLayer(layer), requestRedraw(), openDialog(spec), getTime(), setTime(s), getSelectedId() }
    */
   constructor(env, services) {
     this._env = env;
@@ -193,6 +193,8 @@ export class PluginHost {
       apiVersion: API_VERSION,
       tracks: Object.freeze({
         registerDragGuard: (fn) => own(s.addDragGuard(guard(fn))),
+        /** fn(track) -> { startS, endS } (track time) | null: the part of the track to show and save. */
+        registerRange: (fn) => own(s.addRangeProvider(guard(fn))),
         list: () => s.getTracks().map((t) => Object.freeze({ ...t })),
         get: (id) => { const t = s.getTracks().find((x) => x.id === id); return t ? Object.freeze({ ...t }) : null; },
       }),
@@ -215,9 +217,9 @@ export class PluginHost {
         toast: (message) => s.toast(message),
         requestRedraw: () => s.requestRedraw(),
         registerTimelineLayer: (layer) => own(s.addTimelineLayer({ draw: guard(layer.draw) })),
-        /** Non-modal bar with number fields and buttons; returns { setValues(values), close() }. */
-        openModeBar: (spec) => {
-          const bar = s.openModeBar({ ...spec, onChange: guard(spec.onChange || (() => {})), onButton: guard(spec.onButton || (() => {})) });
+        /** Floating non-modal dialog with number fields and buttons; returns { setValues(values), close() }. */
+        openDialog: (spec) => {
+          const bar = s.openDialog({ ...spec, onChange: guard(spec.onChange || (() => {})), onButton: guard(spec.onButton || (() => {})) });
           own(() => bar.close());
           return bar;
         },

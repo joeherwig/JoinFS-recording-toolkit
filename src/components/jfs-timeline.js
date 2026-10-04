@@ -10,6 +10,7 @@
 
 import { buildLodPyramid, pickLodLevel, altColor, desaturate, horizontalSpeedKt, findFrameIndexAtTime } from '../geo.js';
 import { t } from '../i18n.js';
+import { showTrackMenu } from '../track-menu.js';
 
 const ROW_HEIGHT = 56;
 const RULER_HEIGHT = 24;
@@ -55,6 +56,7 @@ export class JfsTimeline extends HTMLElement {
         </select>
         <button id="zoomOut" title="${t('timeline.zoomOut')}" aria-label="${t('timeline.zoomOut')}">−</button>
         <button id="zoomIn" title="${t('timeline.zoomIn')}" aria-label="${t('timeline.zoomIn')}">+</button>
+        <button id="menuBtn" title="${t('timeline.trackMenu')}" aria-label="${t('timeline.trackMenu')}" aria-haspopup="menu" hidden>⋮</button>
         <span class="time-readout" id="timeReadout">0:00</span>
       </div>
       <div class="scroll-area" id="scrollArea">
@@ -94,6 +96,13 @@ export class JfsTimeline extends HTMLElement {
     this._root.getElementById('playBtn').addEventListener('click', () => this._togglePlay());
     this._root.getElementById('rateSel').addEventListener('change', (e) => this._store && this._store.setPlaybackRate(parseFloat(e.target.value)));
     this._root.getElementById('zoomOut').addEventListener('click', () => this._zoomAround(this._canvasWrap.clientWidth / 2, 0.5));
+    this._menuBtn = this._root.getElementById('menuBtn');
+    this._menuBtn.addEventListener('click', () => {
+      const id = this._menuTargetId();
+      if (id && this._store) showTrackMenu({ store: this._store, trackId: id, anchor: this._menuBtn, restoreFocus: this._menuBtn });
+    });
+    // right click on a row (name column or chart) opens the same menu for that row's track
+    this._root.addEventListener('contextmenu', (e) => this._onContextMenu(e));
     this._root.getElementById('zoomIn').addEventListener('click', () => this._zoomAround(this._canvasWrap.clientWidth / 2, 2));
 
     this._canvasWrap.addEventListener('wheel', (e) => this._onWheel(e), { passive: false });
@@ -214,10 +223,12 @@ export class JfsTimeline extends HTMLElement {
     if (!this._store) return;
     const tracks = this._store.project.tracks;
     this._emptyHint.style.display = tracks.length === 0 ? 'flex' : 'none';
+    this._updateMenuButton();
     this._rowsEl.innerHTML = '';
     tracks.forEach((track) => {
       const row = document.createElement('div');
       row.className = 'row' + (this._store.selectedTrackId === track.id ? ' selected' : '');
+      row.dataset.trackId = track.id;
       row.innerHTML = `
         <span class="swatch" style="background:${track.color}"></span>
         <span class="name" title="${track.callsign || track.model}">${track.callsign || track.model || track.id}</span>
@@ -289,6 +300,35 @@ export class JfsTimeline extends HTMLElement {
     } else if (cursor > this._scrollTimeS + visibleDuration - margin) {
       this._scrollTimeS = Math.max(0, cursor - visibleDuration + margin);
     }
+  }
+
+  /** The track the header menu button acts on: the selected one, or the only one loaded. */
+  _menuTargetId() {
+    if (!this._store) return null;
+    const { selectedTrackId, project } = this._store;
+    if (selectedTrackId) return selectedTrackId;
+    return project.tracks.length === 1 ? project.tracks[0].id : null;
+  }
+
+  _updateMenuButton() {
+    if (this._menuBtn) this._menuBtn.hidden = !this._menuTargetId();
+  }
+
+  _onContextMenu(e) {
+    if (!this._store) return;
+    const path = e.composedPath();
+    let trackId = null;
+    const rowEl = path.find((n) => n.classList && n.classList.contains('row'));
+    if (rowEl) trackId = rowEl.dataset.trackId;
+    else if (path.includes(this._fx)) {
+      const y = e.clientY - this._fx.getBoundingClientRect().top;
+      const tr = this._store.project.tracks[Math.floor(y / ROW_HEIGHT)];
+      trackId = tr && tr.id;
+    }
+    if (!trackId) return;
+    e.preventDefault();
+    this._store.selectTrack(trackId, { toggle: false });
+    showTrackMenu({ store: this._store, trackId, x: e.clientX, y: e.clientY });
   }
 
   // ---- pointer input: ruler (scrub) vs. row body (drag-to-shift-time) -----
@@ -457,6 +497,17 @@ export class JfsTimeline extends HTMLElement {
     const baseColor = dim ? desaturate(track.color.startsWith('#') ? this._hexToHsl(track.color) : track.color) : track.color;
     const alpha = dim ? 0.35 : 0.9;
 
+    // only the part that will be saved is drawn (trim); the plugin layers below are not clipped
+    const range = this._store && this._store.visibleRange(track);
+    ctx.save();
+    if (range) {
+      const cx0 = (range.startS + offsetOverride - visibleStart) * pps;
+      const cx1 = (range.endS + offsetOverride - visibleStart) * pps;
+      ctx.beginPath();
+      ctx.rect(cx0, rowTop, Math.max(0, cx1 - cx0), ROW_HEIGHT);
+      ctx.clip();
+    }
+
     if (track.showAltitude && level.times.length) {
       let altMin = Infinity, altMax = -Infinity;
       for (let i = 0; i < level.min.length; i++) { if (level.min[i] < altMin) altMin = level.min[i]; if (level.max[i] > altMax) altMax = level.max[i]; }
@@ -512,6 +563,8 @@ export class JfsTimeline extends HTMLElement {
       }
       ctx.globalAlpha = 1;
     }
+
+    ctx.restore();
 
     // plugin layers (trim shading, pin marker, ...) draw on top of the row; a failing layer is skipped
     if (this._store && this._store.timelineLayers.size) {

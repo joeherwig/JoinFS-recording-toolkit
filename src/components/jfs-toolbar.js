@@ -25,19 +25,16 @@ const STYLE = `
   select { background: var(--btn-bg, #1e2433); color: inherit; border: 1px solid var(--border, #262b36); border-radius: 6px; padding: 4px 6px; }
   .spacer { flex: 1; }
   .title { font-weight: 600; margin-right: 8px; }
-  .menu-wrap { position: relative; }
-  .menu { position: absolute; top: 100%; left: 0; z-index: 2100; min-width: 200px; margin-top: 4px; padding: 4px; background: var(--panel-bg, #12141a); border: 1px solid var(--border, #262b36); border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.35); }
-  .menu[hidden] { display: none; }
-  .menu button { display: block; width: 100%; min-height: 44px; text-align: left; border: none; background: transparent; }
-  .menu button:hover, .menu button:focus-visible { background: var(--btn-bg-hover, #2d3748); }
-  .menu .empty { padding: 10px; color: var(--muted, #6b7280); }
-  .modebar { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 6px 0 2px; border-top: 1px solid var(--border, #262b36); }
-  .modebar[hidden] { display: none; }
-  .modebar .mode-title { font-weight: 600; }
-  .modebar label { display: flex; align-items: center; gap: 6px; }
-  .modebar input { width: 7em; min-height: 32px; background: var(--btn-bg, #1e2433); color: inherit; border: 1px solid var(--border, #262b36); border-radius: 6px; padding: 2px 6px; }
-  .modebar button { min-height: 44px; }
-  .modebar button.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+  dialog.edit { position: fixed; inset: 0 auto auto 0; z-index: 2500; margin: 0; width: min(92vw, 360px); max-height: 80vh; overflow: auto; padding: 0;
+    background: var(--panel-bg, #12141a); color: var(--fg, #e2e8f0); border: 1px solid var(--border, #262b36); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+  dialog.edit .edit-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border, #262b36); font-weight: 600; }
+  dialog.edit .edit-head button { min-width: 44px; min-height: 44px; border: none; background: transparent; font-size: 18px; }
+  dialog.edit .edit-body { display: flex; flex-direction: column; gap: 10px; padding: 12px; }
+  dialog.edit label { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  dialog.edit input { width: 8em; min-height: 36px; background: var(--btn-bg, #1e2433); color: inherit; border: 1px solid var(--border, #262b36); border-radius: 6px; padding: 2px 8px; }
+  dialog.edit .edit-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+  dialog.edit .edit-buttons button { min-height: 44px; flex: 1 1 auto; }
+  dialog.edit .edit-buttons button.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
   .warnings { position: fixed; top: 44px; right: 10px; z-index: 2000; display: flex; flex-direction: column; gap: 6px; max-width: 360px; }
   .warning { background: #7c2d12; color: #fed7aa; border-radius: 6px; padding: 8px 10px; font-size: 12px; display: flex; gap: 8px; align-items: start; }
   .warning button { background: transparent; border: none; color: inherit; font-size: 14px; padding: 0 0 0 4px; }
@@ -54,10 +51,6 @@ export class JfsToolbar extends HTMLElement {
       <button id="saveBtn" title="${t('toolbar.save')} (Ctrl+S)">${t('toolbar.save')}</button>
       <button id="undoBtn" title="${t('toolbar.undo')} (Ctrl+Z)" disabled>↶</button>
       <button id="redoBtn" title="${t('toolbar.redo')} (Ctrl+Shift+Z)" disabled>↷</button>
-      <span class="menu-wrap">
-        <button id="trackBtn" aria-haspopup="menu" aria-expanded="false" disabled>${t('toolbar.trackMenu')} ▾</button>
-        <div class="menu" id="trackMenu" role="menu" hidden></div>
-      </span>
       <select id="buildVariant" title="${t('toolbar.buildVariant.fs2024')}">
         <option value="fs2024" selected>${t('toolbar.buildVariant.fs2024')}</option>
         <option value="other">${t('toolbar.buildVariant.other')}</option>
@@ -68,7 +61,7 @@ export class JfsToolbar extends HTMLElement {
         <option value="light">${t('toolbar.appTheme.light')}</option>
         <option value="dark">${t('toolbar.appTheme.dark')}</option>
       </select>
-      <div class="modebar" id="modeBar" hidden></div>
+      <dialog class="edit" id="editDialog"></dialog>
       <div class="warnings" id="warnings"></div>
     `;
     this._store = null;
@@ -79,10 +72,6 @@ export class JfsToolbar extends HTMLElement {
     this._root.getElementById('saveBtn').addEventListener('click', () => this._doSave());
     this._root.getElementById('undoBtn').addEventListener('click', () => this._store && this._store.undo());
     this._root.getElementById('redoBtn').addEventListener('click', () => this._store && this._store.redo());
-    this._root.getElementById('trackBtn').addEventListener('click', (e) => { e.stopPropagation(); this._toggleTrackMenu(); });
-    // outside click or Escape closes the menu; composedPath so clicks inside this shadow root count as inside
-    document.addEventListener('click', (e) => { if (!e.composedPath().includes(this._root.getElementById('trackMenu'))) this._closeTrackMenu(); });
-    this._root.getElementById('trackMenu').addEventListener('keydown', (e) => { if (e.key === 'Escape') { this._closeTrackMenu(); this._root.getElementById('trackBtn').focus(); } });
     this._root.getElementById('appTheme').addEventListener('change', (e) => {
       this.dispatchEvent(new CustomEvent('app-theme-changed', { detail: { theme: e.target.value } }));
     });
@@ -93,70 +82,42 @@ export class JfsToolbar extends HTMLElement {
 
   set store(store) {
     this._store = store;
-    const syncTrackBtn = () => { this._root.getElementById('trackBtn').disabled = !store.selectedTrackId; this._closeTrackMenu(); };
-    store.addEventListener('selection-changed', syncTrackBtn);
     store.addEventListener('history-changed', (e) => {
       this._root.getElementById('undoBtn').disabled = !e.detail.canUndo;
       this._root.getElementById('redoBtn').disabled = !e.detail.canRedo;
     });
   }
 
-  // ---- Track Actions menu: entries come from the plugin host (manifests first, live registrations after) ----
-
-  _toggleTrackMenu() {
-    const menu = this._root.getElementById('trackMenu');
-    if (!menu.hidden) return this._closeTrackMenu();
-    menu.replaceChildren();
-    const actions = this.plugins ? this.plugins.trackActions() : [];
-    if (!actions.length) {
-      const none = document.createElement('div');
-      none.className = 'empty';
-      none.textContent = t('toolbar.trackMenuEmpty');
-      menu.appendChild(none);
-    }
-    for (const a of actions) {
-      const item = document.createElement('button');
-      item.type = 'button';
-      item.setAttribute('role', 'menuitem');
-      item.textContent = a.text;
-      item.addEventListener('click', () => {
-        this._closeTrackMenu();
-        const id = this._store && this._store.selectedTrackId;
-        if (id) this.plugins.runTrackAction(a.pluginId, a.id, id);
-      });
-      menu.appendChild(item);
-    }
-    menu.hidden = false;
-    this._root.getElementById('trackBtn').setAttribute('aria-expanded', 'true');
-    const first = menu.querySelector('button');
-    if (first) first.focus();
-  }
-
-  _closeTrackMenu() {
-    const menu = this._root.getElementById('trackMenu');
-    if (menu.hidden) return;
-    menu.hidden = true;
-    this._root.getElementById('trackBtn').setAttribute('aria-expanded', 'false');
-  }
-
-  // ---- mode bar: a non-modal strip for plugin edit modes (trim, ...) ----
+  // ---- edit dialog: a floating, non-modal dialog for plugin edit modes (trim, ...) ----
+  // Non-modal on purpose: the timeline and the playhead stay usable while it is open ("Start = playhead").
 
   /**
    * spec: { title, fields: [{ id, label, value, step, min }], buttons: [{ id, label, primary }], onChange(values), onButton(id, values) }
-   * Returns { setValues(values), close() }. Only one mode bar is open at a time; opening another closes the first.
+   * Returns { setValues(values), close() }. Only one is open at a time; opening another closes the first.
+   * The close button and Esc count as the button with id 'cancel'.
    */
-  openModeBar(spec) {
-    if (this._modeBarHandle) this._modeBarHandle.close();
-    const bar = this._root.getElementById('modeBar');
-    bar.replaceChildren();
+  openDialog(spec) {
+    if (this._dialogHandle) this._dialogHandle.close();
+    const dlg = this._root.getElementById('editDialog');
+    dlg.replaceChildren();
+    const head = document.createElement('div');
+    head.className = 'edit-head';
     const title = document.createElement('span');
-    title.className = 'mode-title';
     title.textContent = spec.title;
-    bar.appendChild(title);
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.textContent = '×';
+    closeBtn.title = t('modal.close');
+    closeBtn.setAttribute('aria-label', t('modal.close'));
+    head.append(title, closeBtn);
+    const body = document.createElement('div');
+    body.className = 'edit-body';
     const inputs = new Map();
     const values = () => Object.fromEntries([...inputs].map(([id, el]) => [id, el.value === '' ? NaN : Number(el.value)]));
     for (const fld of spec.fields || []) {
       const label = document.createElement('label');
+      const text = document.createElement('span');
+      text.textContent = fld.label;
       const input = document.createElement('input');
       input.type = 'number';
       input.value = fld.value;
@@ -164,24 +125,44 @@ export class JfsToolbar extends HTMLElement {
       if (fld.min !== undefined) input.min = fld.min;
       input.addEventListener('input', () => spec.onChange && spec.onChange(values()));
       inputs.set(fld.id, input);
-      label.append(fld.label + ' ', input);
-      bar.appendChild(label);
+      label.append(text, input);
+      body.appendChild(label);
     }
+    const buttons = document.createElement('div');
+    buttons.className = 'edit-buttons';
     for (const b of spec.buttons || []) {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.textContent = b.label;
       if (b.primary) btn.className = 'primary';
       btn.addEventListener('click', () => spec.onButton && spec.onButton(b.id, values()));
-      bar.appendChild(btn);
+      buttons.appendChild(btn);
     }
-    bar.hidden = false;
+    body.appendChild(buttons);
+    dlg.append(head, body);
+    closeBtn.addEventListener('click', () => spec.onButton && spec.onButton('cancel', values()));
+    dlg.oncancel = (e) => { e.preventDefault(); if (spec.onButton) spec.onButton('cancel', values()); };
+    dlg.show();
+    this._centerOverMap(dlg);
+    this._onResize = () => this._centerOverMap(dlg);
+    window.addEventListener('resize', this._onResize);
+    const first = inputs.values().next().value;
+    if (first) first.focus();
     const handle = {
       setValues: (v) => { for (const [id, el] of inputs) if (v[id] !== undefined) el.value = v[id]; },
-      close: () => { if (this._modeBarHandle !== handle) return; this._modeBarHandle = null; bar.hidden = true; bar.replaceChildren(); },
+      close: () => { if (this._dialogHandle !== handle) return; this._dialogHandle = null; window.removeEventListener('resize', this._onResize); dlg.close(); dlg.replaceChildren(); },
     };
-    this._modeBarHandle = handle;
+    this._dialogHandle = handle;
     return handle;
+  }
+
+  /** Centres the floating dialog over the map (the timeline below stays free for scrubbing). */
+  _centerOverMap(dlg) {
+    const map = document.querySelector('jfs-map');
+    const area = map ? map.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+    const r = dlg.getBoundingClientRect();
+    dlg.style.left = `${Math.max(0, area.left + (area.width - r.width) / 2)}px`;
+    dlg.style.top = `${Math.max(area.top, area.top + (area.height - r.height) / 2)}px`;
   }
 
   /** Shows a short message in the warnings area (plugins use it through ctx.ui.toast). */
