@@ -2,15 +2,7 @@
 // A Project is just `{ tracks: Track[] }` - no persisted project format; re-opening an exported
 // .jfs file IS the resume-editing workflow (see REQUIREMENTS.md).
 
-import { decodeJfsFile, encodeJfsFile } from './jfs-codec.js';
-import { colorForTrackId } from './colors.js';
-
-/** Decodes a .jfs ArrayBuffer into an array of Tracks ready to add to a project. */
-export function tracksFromJfsBuffer(arrayBuffer, sourceFileName) {
-  const { tracks, warnings } = decodeJfsFile(arrayBuffer, { sourceFileName });
-  for (const t of tracks) t.color = colorForTrackId(t.id);
-  return { tracks, warnings };
-}
+import { formats } from './formats/index.js';
 
 /** Sets a track's cumulative time offset (does not touch frame data - see PLAN.md Step 2). */
 export function setTrackOffset(project, trackId, offsetS) {
@@ -26,10 +18,10 @@ export function removeTrack(project, trackId) {
 
 /**
  * Rebases every track's frame times so the minimum effective time (frame.time + track.timeOffsetS)
- * across the whole project is >= 0, then encodes the merged .jfs file. Rebase happens only here, at
+ * across the whole project is >= 0, then encodes the merged file with the chosen format (default: legacy .jfs, `{ buildVariant }` as option). Rebase happens only here, at
  * export time - not continuously during editing (PLAN.md Step 2).
  */
-export function exportProject(project, { buildVariant = 'fs2024' } = {}) {
+export function exportProject(project, { formatId = 'jfs-legacy', ...options } = {}) {
   if (project.tracks.length === 0) throw new Error('Project has no tracks to export.');
 
   let minT = Infinity;
@@ -48,5 +40,5 @@ export function exportProject(project, { buildVariant = 'fs2024' } = {}) {
     return { ...track, frames: { ...track.frames, times } };
   });
 
-  return encodeJfsFile(finalTracks, { buildVariant });
+  return formats.encode(formatId, finalTracks, options);
 }

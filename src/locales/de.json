@@ -17,5 +17,6 @@
   "timeline.altitude": "Höhe",
   "timeline.speed": "Geschwindigkeit",
   "timeline.play": "Abspielen",
-  "timeline.pause": "Pause"
+  "timeline.pause": "Pause",
+  "format.loss.staticCg": "Diese Datei nutzt das ältere Aufzeichnungslayout. Beim Speichern wird das aktuelle JoinFS-Layout geschrieben, das die statische Schwerpunkthöhe nicht speichert."
 }

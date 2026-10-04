@@ -2,7 +2,8 @@
 // banner. See PLAN.md Step 1/6.
 
 import { pickFilesToOpen, saveJfsFile } from '../file-io.js';
-import { tracksFromJfsBuffer, exportProject } from '../project-model.js';
+import { exportProject } from '../project-model.js';
+import { formats } from '../formats/index.js';
 import { openGpxImportModal } from './jfs-gpx-modal.js';
 import { t } from '../i18n.js';
 
@@ -75,25 +76,18 @@ export class JfsToolbar extends HTMLElement {
 
   setAppTheme(theme) { this._root.getElementById('appTheme').value = theme; }
 
+  /**
+   * Imports files through the formats registry: the registry sniffs each file and the matching format decodes it.
+   * Interactive formats (GPX) get their dialog through `ctx.ui`; they resolve `null` if the user cancels.
+   */
   async importFiles(files) {
+    const ctx = { ui: { convertGpx: (file) => openGpxImportModal(file) } };
     for (const file of files) {
       try {
-        const isGpx = /\.gpx$/i.test(file.name);
-        if (isGpx) {
-          // Route through the real gpx-to-jfs-webcomponent (embedded as a modal) rather than
-          // reimplementing its conversion - see jfs-gpx-modal.js. The user reviews/adjusts its form
-          // and clicks its own Convert button; we get back the resulting .jfs Blob (or null if they
-          // closed the modal without converting) and feed it through the normal .jfs import path.
-          const result = await openGpxImportModal(file);
-          if (!result) continue; // cancelled
-          const { tracks, warnings } = tracksFromJfsBuffer(await result.blob.arrayBuffer(), result.filename);
-          this._store.addTracks(tracks);
-          for (const w of warnings) this._pushWarning(w);
-        } else {
-          const { tracks, warnings } = tracksFromJfsBuffer(await file.arrayBuffer(), file.name);
-          this._store.addTracks(tracks);
-          for (const w of warnings) this._pushWarning(w);
-        }
+        const result = await formats.decodeFile(file, ctx);
+        if (!result) continue; // cancelled
+        this._store.addTracks(result.tracks);
+        for (const w of result.warnings) this._pushWarning(w);
       } catch (err) {
         this._pushWarning(`${file.name}: ${err.message}`);
       }
@@ -101,7 +95,7 @@ export class JfsToolbar extends HTMLElement {
   }
 
   async _doImport() {
-    const picked = await pickFilesToOpen();
+    const picked = await pickFilesToOpen(formats.importExtensions());
     await this.importFiles(picked.map((p) => p.file));
   }
 
@@ -116,7 +110,8 @@ export class JfsToolbar extends HTMLElement {
     }
     const buildVariant = this._root.getElementById('buildVariant').value;
     try {
-      const bytes = exportProject(this._store.project, { buildVariant });
+      for (const key of formats.lossWarnings('jfs-legacy', this._store.project)) this._pushWarning(t(key));
+      const bytes = exportProject(this._store.project, { formatId: 'jfs-legacy', buildVariant });
       await saveJfsFile(bytes, 'project.jfs');
     } catch (err) {
       this._pushWarning(`Save failed: ${err.message}`);

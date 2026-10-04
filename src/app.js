@@ -5,6 +5,7 @@ import { Store } from './store.js';
 import { initTheme, setTheme, getStoredTheme } from './theme.js';
 import { setLocale, resolveLocaleFromUrl } from './i18n.js';
 import { shortcuts } from './shortcuts.js';
+import { formats } from './formats/index.js';
 
 async function main() {
   initTheme();
@@ -42,7 +43,7 @@ async function main() {
     el.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
     el.addEventListener('drop', (e) => {
       e.preventDefault();
-      const files = Array.from(e.dataTransfer.files || []).filter((f) => /\.(jfs|gpx)$/i.test(f.name));
+      const files = Array.from(e.dataTransfer.files || []).filter((f) => formats.acceptsName(f.name));
       if (files.length) toolbarEl.importFiles(files);
     });
   }

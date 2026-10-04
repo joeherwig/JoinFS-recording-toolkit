@@ -17,5 +17,6 @@
   "timeline.altitude": "Altitude",
   "timeline.speed": "Speed",
   "timeline.play": "Play",
-  "timeline.pause": "Pause"
+  "timeline.pause": "Pause",
+  "format.loss.staticCg": "This file uses the older recording layout. Saving writes the current JoinFS layout, which does not store the static CG height."
 }
