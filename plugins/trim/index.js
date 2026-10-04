@@ -4,6 +4,12 @@
 
 const EPS = 1e-6;
 const round1 = (x) => Math.round(x * 10) / 10;
+// 3725.4 -> "01:02:05.4" (tenths only when present)
+const clock = (sec) => {
+  const tenths = Math.round(Math.max(0, sec) * 10), whole = Math.floor(tenths / 10), frac = tenths % 10;
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(Math.floor(whole / 3600))}:${p(Math.floor((whole % 3600) / 60))}:${p(whole % 60)}${frac ? '.' + frac : ''}`;
+};
 
 function bounds(track) {
   const times = track.frames.times;
@@ -72,14 +78,22 @@ export function activate(ctx) {
 
       const bar = ctx.ui.openDialog({
         title: ctx.i18n.t('bar.title', { name: track.callsign || track.id }),
+        summary: (v) => {
+          const from = Number.isFinite(v.start) ? clamp(v.start) : 0, to = Number.isFinite(v.end) ? clamp(v.end) : dur;
+          return ctx.i18n.t('summary', { from: clock(from), to: clock(to), kept: clock(Math.max(0, to - from)), total: clock(dur) });
+        },
+        range: { startId: 'start', endId: 'end', min: 0, max: round1(dur), step: 0.1, startLabel: ctx.i18n.t('field.start'), endLabel: ctx.i18n.t('field.end') },
+        // start and end are carried by the range bar (hidden fields); the playhead buttons set them exactly
         fields: [
-          { id: 'start', label: ctx.i18n.t('field.start'), value: toRel(current.startS), step: 0.1, min: 0 },
-          { id: 'end', label: ctx.i18n.t('field.end'), value: toRel(current.endS), step: 0.1, min: 0 },
+          { id: 'start', type: 'time', hidden: true, label: ctx.i18n.t('field.start'), value: toRel(current.startS) },
+          { id: 'end', type: 'time', hidden: true, label: ctx.i18n.t('field.end'), value: toRel(current.endS) },
+        ],
+        actions: [
+          { id: 'startHere', icon: ctx.icon('startHere'), label: ctx.i18n.t('button.startHere'), title: ctx.i18n.t('button.startHere') },
+          { id: 'endHere', icon: ctx.icon('endHere'), label: ctx.i18n.t('button.endHere'), title: ctx.i18n.t('button.endHere') },
         ],
         buttons: [
-          { id: 'startHere', label: ctx.i18n.t('button.startHere') },
-          { id: 'endHere', label: ctx.i18n.t('button.endHere') },
-          { id: 'reset', label: ctx.i18n.t('button.reset') },
+          { id: 'reset', label: ctx.i18n.t('button.reset'), quiet: true },
           { id: 'cancel', label: ctx.i18n.t('button.cancel') },
           { id: 'apply', label: ctx.i18n.t('button.apply'), primary: true },
         ],
@@ -122,7 +136,7 @@ export function activate(ctx) {
       undo: () => { if (before) ext.trim = before; else delete ext.trim; },
     });
     ctx.ui.toast(after
-      ? ctx.i18n.t('toast.applied', { from: round1(after.startS - t0), to: round1(after.endS - t0) })
+      ? ctx.i18n.t('toast.applied', { from: clock(after.startS - t0), to: clock(after.endS - t0) })
       : ctx.i18n.t('toast.cleared'));
     endSession();
   }

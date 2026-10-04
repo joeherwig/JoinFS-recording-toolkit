@@ -81,7 +81,15 @@ export class PluginHost {
   async _loadIcons(entry) {
     const actions = ((entry.manifest.contributes || {}).trackActions || []).filter((a) => a.icon);
     entry.icons = {};
+    entry.assets = {};
     if (!this._env.fetchText) return;
+    // manifest.icons: { name: 'path.svg' } - small SVGs the plugin itself uses in its dialogs (ctx.icon(name))
+    for (const [name, path] of Object.entries(entry.manifest.icons || {})) {
+      const url = new URL(`${entry.id}/${path}`, this._env.baseUrl).href;
+      try { entry.assets[name] = await this._env.fetchText(url); } catch (err) {
+        this._env.warn(`Plugin "${entry.id}": icon ${url} not loaded (${err.message}).`);
+      }
+    }
     for (const a of actions) {
       const url = new URL(`${entry.id}/${a.icon}`, this._env.baseUrl).href;
       try { entry.icons[a.id] = await this._env.fetchText(url); } catch (err) {
@@ -217,6 +225,8 @@ export class PluginHost {
         get: (id) => { const t = s.getTracks().find((x) => x.id === id); return t ? Object.freeze({ ...t }) : null; },
       }),
       exec: (command) => s.exec(command),
+      /** SVG text of an icon named in the manifest's `icons`, or '' if it could not be loaded. */
+      icon: (name) => (entry.assets && entry.assets[name]) || '',
       time: Object.freeze({ get: () => s.getTime(), set: (seconds) => s.setTime(seconds) }),
       selection: Object.freeze({ get: () => s.getSelectedId() }),
       i18n: Object.freeze({ t: (key, params) => s.t(`plugin.${entry.id}.${key}`, params) }),

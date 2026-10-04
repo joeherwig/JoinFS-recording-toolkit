@@ -1,14 +1,15 @@
 {
   "action.edit": "Spur kürzen…",
   "bar.title": "Kürzen: {name}",
-  "field.start": "Start (s)",
-  "field.end": "Ende (s)",
+  "field.start": "Start",
+  "field.end": "Ende",
   "button.startHere": "Start = Wiedergabeposition",
   "button.endHere": "Ende = Wiedergabeposition",
   "button.reset": "Zurücksetzen",
   "button.cancel": "Abbrechen",
   "button.apply": "Übernehmen",
-  "toast.applied": "Kürzung von {from} s bis {to} s gesetzt. Die abgeschnittenen Teile werden beim Speichern entfernt.",
+  "toast.applied": "Kürzung auf {from} – {to} gesetzt. Die abgeschnittenen Teile werden beim Speichern entfernt.",
   "toast.cleared": "Kürzung entfernt.",
-  "toast.invalid": "Der Start muss vor dem Ende liegen."
+  "toast.invalid": "Der Start muss vor dem Ende liegen.",
+  "summary": "Behalten: **{from} – {to}** ({kept} von {total})"
 }

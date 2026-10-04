@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "apiVersion": 1,
   "activation": "onAction",
+  "icons": { "startHere": "icons/set-start.svg", "endHere": "icons/set-end.svg" },
   "contributes": {
     "trackActions": [{ "id": "edit", "label": "action.edit", "icon": "icons/scissors.svg" }],
     "exportTransforms": [{ "id": "apply" }]
