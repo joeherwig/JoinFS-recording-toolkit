@@ -133,7 +133,7 @@ export class JfsTimeline extends HTMLElement {
 
   // ---- playback -------------------------------------------------------
 
-  /** Public entry point so app.js can trigger this from the global Space hotkey. */
+  /** Public entry point so joinfs-recorder-toolkit.js can trigger this from the global Space hotkey. */
   togglePlay() { this._togglePlay(); }
 
   _togglePlay() {

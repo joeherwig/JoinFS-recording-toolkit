@@ -110,7 +110,7 @@ export class JfsToolbar extends HTMLElement {
     await this.importFiles(picked.map((p) => p.file));
   }
 
-  /** Public entry points so app.js can trigger these from global hotkeys (Ctrl+O / Ctrl+S). */
+  /** Public entry points so joinfs-recorder-toolkit.js can trigger these from global hotkeys (Ctrl+O / Ctrl+S). */
   async openFiles() { return this._doImport(); }
   async save() { return this._doSave(); }
 
