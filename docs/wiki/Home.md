@@ -10,6 +10,8 @@ No installation and no build step: it is plain HTML and JavaScript. Your files n
 > **Drag and drop:** drag one or **several** `.jfs` and `.gpx` files (even mixed) from your file manager onto the map
 > or the timeline, and they are all imported at once. Each recorded aircraft becomes its own track.
 
+![The toolkit with three aircraft on the dark map layer](images/overview-dark.png)
+
 ## Where to start
 
 | I want to... | Read |
@@ -19,6 +21,7 @@ No installation and no build step: it is plain HTML and JavaScript. Your files n
 | move, trim, pin or remove tracks, undo mistakes | [Editing Tracks](Editing-Tracks) |
 | know what ends up in the saved file | [Saving and Formats](Saving-and-Formats) |
 | use the keyboard and mouse faster | [Keyboard and Mouse](Keyboard-and-Mouse) |
+| change the language or the theme | [Language and Theme](Language-and-Theme) |
 | understand how features are built as plugins | [Plugin Concept](Plugin-Concept) |
 | write my own plugin | [Writing a Plugin](Writing-a-Plugin) |
 

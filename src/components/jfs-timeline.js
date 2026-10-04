@@ -31,7 +31,7 @@ const STYLE = `
   .scroll-body { display: flex; }
   .sidebar { width: ${SIDEBAR_WIDTH}px; flex: none; border-right: 1px solid var(--border, #262b36); }
   .row { height: ${ROW_HEIGHT}px; box-sizing: border-box; display: flex; align-items: center; gap: 6px; padding: 0 6px; border-bottom: 1px solid var(--border, #1c2129); cursor: pointer; }
-  .row.selected { background: rgba(255,255,255,.06); }
+  .row.selected { background: color-mix(in srgb, var(--fg, #e2e8f0) 8%, transparent); }
   .row .swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
   .row .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .row .lane-toggle { font-size: 10px; padding: 1px 4px; border-radius: 3px; border: 1px solid var(--border, #262b36); background: transparent; color: inherit; cursor: pointer; opacity: .55; }
@@ -132,11 +132,15 @@ export class JfsTimeline extends HTMLElement {
   connectedCallback() {
     this._resizeObserver = new ResizeObserver(() => this._resizeAndDraw());
     this._resizeObserver.observe(this._scrollArea);
+    // canvas colours come from the theme tokens, so a theme switch (data-theme on <html>) redraws everything
+    this._themeObserver = new MutationObserver(() => this._scheduleDraw(false));
+    this._themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     this._resizeAndDraw();
   }
 
   disconnectedCallback() {
     if (this._resizeObserver) this._resizeObserver.disconnect();
+    if (this._themeObserver) this._themeObserver.disconnect();
     if (this._rafHandle) cancelAnimationFrame(this._rafHandle);
   }
 
@@ -438,13 +442,21 @@ export class JfsTimeline extends HTMLElement {
     });
   }
 
+  /** The theme's text colour (--fg) with the given alpha, so canvas drawing follows the light and dark theme. */
+  _ink(alpha) {
+    const hex = (getComputedStyle(this).getPropertyValue('--fg') || '').trim();
+    const m = /^#([0-9a-f]{6})$/i.exec(hex);
+    const n = m ? parseInt(m[1], 16) : 0xe2e8f0;
+    return `rgba(${n >> 16}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+  }
+
   _drawRuler() {
     const ctx = this._ruler.getContext('2d');
     const w = this._ruler.clientWidth;
     ctx.clearRect(0, 0, w, RULER_HEIGHT);
-    ctx.fillStyle = 'rgba(255,255,255,.08)';
+    ctx.fillStyle = this._ink(0.08);
     ctx.fillRect(0, 0, w, RULER_HEIGHT);
-    ctx.fillStyle = 'rgba(255,255,255,.55)';
+    ctx.fillStyle = this._ink(0.6);
     ctx.font = '10px system-ui, sans-serif';
     const pps = this._pixelsPerSecond;
     const visibleStart = this._scrollTimeS;
@@ -474,7 +486,7 @@ export class JfsTimeline extends HTMLElement {
         ? this._drag.startOffsetS + (this._drag.previewDx || 0) / pps
         : track.timeOffsetS;
       this._drawRow(ctx, track, rowTop, visibleStart, visibleDuration, pps, dim, offset, w);
-      ctx.strokeStyle = 'rgba(255,255,255,.08)';
+      ctx.strokeStyle = this._ink(0.1);
       ctx.beginPath(); ctx.moveTo(0, rowTop + ROW_HEIGHT); ctx.lineTo(w, rowTop + ROW_HEIGHT); ctx.stroke();
     });
   }
@@ -554,7 +566,7 @@ export class JfsTimeline extends HTMLElement {
     // matching change for why (markers were invisible by default since nothing starts selected).
     if (track.showEvents && track.events && track.events.length) {
       ctx.globalAlpha = alpha;
-      ctx.fillStyle = '#f8fafc';
+      ctx.fillStyle = this._ink(0.95);
       for (const evt of track.events) {
         const x = (evt.timeS + offsetOverride - visibleStart) * pps;
         if (x < 0 || x > canvasWidth) continue;

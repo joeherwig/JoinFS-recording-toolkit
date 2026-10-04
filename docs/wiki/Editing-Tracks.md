@@ -40,6 +40,8 @@ The functions that work on one track are plugins and are reached in two ways:
 
 Menu entries have icons and come from the [plugins](Plugin-Concept). The menu closes with **Esc** or a click outside.
 
+![The track menu with Pin and Trim](images/track-menu.png)
+
 ### Pin / unpin track
 
 Locks a track in time. A pinned track shows a pin on its row and cannot be dragged. Use it to protect a reference
@@ -60,6 +62,8 @@ Cuts the start and the end off a track **without changing it**, until you save.
    00:00:10.9 (00:00:07.2 of 00:00:14.8)*.
 4. **Apply** stores the trim (one undoable step). **Cancel**, the **×** or **Esc** closes the dialog and keeps
    whatever was applied before.
+
+![The trim dialog: range bar, playhead buttons, Reset, Cancel and Apply](images/trim-dialog.png)
 
 While the dialog is open, and after Apply, the timeline and the map show the track **as it will be saved**: only
 the kept part is drawn and the arrow is hidden outside it. While you are still adjusting, the cut parts are hinted in

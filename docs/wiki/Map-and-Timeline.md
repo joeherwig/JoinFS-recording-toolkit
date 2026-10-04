@@ -1,5 +1,7 @@
 # Map and Timeline
 
+![Map and timeline with three tracks](images/overview-dark.png)
+
 ## Map
 
 - **Path colour:** altitude, in steps of 500 ft; **grey** while the aircraft is on the ground. The grey is tuned per
@@ -8,7 +10,8 @@
 - **Event markers:** small dots where gear, flaps or lights changed; hover for the text ("Gear: Down"). They can be
   switched off per track with the **EVT** button on the timeline.
 - **Legend** (bottom right): one entry per track; click to select.
-- **Layer button** (top right, or press **L**): cycles *Dark → Light (OSM) → Satellite*.
+- **Layer button** (top right, or press **L**): cycles *Dark → Light (OSM) → Satellite*. See
+  [Language and Theme](Language-and-Theme#map-layer).
 - The map zooms to all tracks when you add or remove tracks, not on every change.
 - Positions at exactly 0/0 (some recordings have a placeholder before the first real fix) are ignored.
 

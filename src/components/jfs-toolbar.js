@@ -317,8 +317,9 @@ export class JfsToolbar extends HTMLElement {
     this._centerOverMap(dlg);
     this._onResize = () => this._centerOverMap(dlg);
     window.addEventListener('resize', this._onResize);
-    const first = inputs.values().next().value;
-    if (first) first.el.focus();
+    // focus the first visible control (hidden fields have no element in the page); the range handle otherwise
+    const first = [...inputs.values()].map((x) => x.el).find((e) => e.isConnected) || dlg.querySelector('.thumb.start');
+    if (first) first.focus();
     const handle = {
       setValues: (v) => { for (const [id, a] of inputs) if (v[id] !== undefined) a.set(v[id]); refresh(); },
       close: () => { if (this._dialogHandle !== handle) return; this._dialogHandle = null; window.removeEventListener('resize', this._onResize); document.removeEventListener('keydown', this._onEsc, true); dlg.close(); dlg.replaceChildren(); },

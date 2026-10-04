@@ -49,7 +49,9 @@ the **build variant** in the toolbar first if you need to; see [Saving and Forma
 
 ## Language and theme
 
-- **Language:** English and German. The browser language is used; add `?lang=de` or `?lang=en` to the address to force
-  one.
-- **Theme:** the *Auto / Light / Dark* selector at the right of the toolbar. The map has its own layer button
-  (see [Map and Timeline](Map-and-Timeline)).
+- **Language:** English and German. Add `?lang=de` or `?lang=en` to the address to force one; otherwise the browser
+  language is used.
+- **Theme:** the *Auto / Light / Dark* selector at the right of the toolbar; *Auto* follows your system's colour
+  scheme. The map has its own layer button (dark, light, satellite).
+
+Details, with screenshots of the light, dark and satellite looks, are on [Language and Theme](Language-and-Theme).

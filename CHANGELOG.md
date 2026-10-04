@@ -34,6 +34,9 @@ pin and trim tracks, and saves one `.jfs` that current JoinFS replays.
 
 - Typing a space in the GPX import form no longer toggles playback: keyboard shortcuts now ignore every text-entry
   context, including inputs inside shadow roots and open dialogs.
+- The timeline's ruler, event markers and lines were drawn in a fixed light colour and vanished on the light theme;
+  they now follow the theme and redraw when it changes.
+- The GPX converter dialog now follows the toolkit's `?lang=` language instead of only the browser language.
 - Esc closes the open menu or dialog without applying anything, wherever the focus is.
 - Hard-coded timeline and dialog strings now go through the translator (English and German).
 - Warning text is shown as text, never as markup.

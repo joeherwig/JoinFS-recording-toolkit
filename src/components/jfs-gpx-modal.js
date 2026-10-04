@@ -6,7 +6,7 @@
 // listen for the 'converted' event it dispatches and hand the resulting .jfs Blob back to the caller,
 // who feeds it through the normal jfs-codec.js decode path exactly like any other .jfs import.
 
-import { t } from '../i18n.js';
+import { t, getLocale } from '../i18n.js';
 
 const VENDOR_SRC = new URL('../vendor/joinfs-gpx-to-jfs.js', import.meta.url);
 
@@ -56,7 +56,7 @@ export async function openGpxImportModal(file) {
         <button type="button" id="closeBtn" aria-label="${t('modal.close')}" title="${t('modal.close')}">×</button>
       </div>
       <div class="modal-body">
-        <joinfs-gpx-to-jfs no-url-params></joinfs-gpx-to-jfs>
+        <joinfs-gpx-to-jfs no-url-params lang="${getLocale()}"></joinfs-gpx-to-jfs>
       </div>
     </dialog>
   `;
