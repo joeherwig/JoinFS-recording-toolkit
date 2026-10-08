@@ -38,7 +38,7 @@ No installation and no build step: it is plain HTML and JavaScript. Your files n
 | **Ctrl+Z** / **Ctrl+Shift+Z** | undo / redo |
 | **Ctrl+S** | save |
 | **Esc** | close the open menu or dialog without applying; otherwise clear the selection |
-| right-click a track row | track actions (pin, trim, ground height) |
+| right-click a track row | track actions (pin, trim, edit aircraft, ground height) |
 
 All of them, with the mouse gestures, are on [Keyboard and Mouse](Keyboard-and-Mouse). On a Mac use Cmd instead of Ctrl.
 
@@ -54,7 +54,7 @@ All of them, with the mouse gestures, are on [Keyboard and Mouse](Keyboard-and-M
   ([Ground Height](Ground-Height)).
 - **Save** one `.jfs` in the layout current JoinFS reads.
 
-The functions beyond the basics (pin, trim, ground height) are [plugins](Plugin-Concept): the viewer, playback and saving
+The functions beyond the basics (pin, trim, edit aircraft, ground height) are [plugins](Plugin-Concept): the viewer, playback and saving
 work with every plugin switched off or missing.
 
 ## Related projects

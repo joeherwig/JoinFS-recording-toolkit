@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Edit aircraft** (plugin `edit-aircraft`): the track menu gets *Edit aircraft type, callsign, nickname, altitude* (pen icon). A
+  responsive form with automatic light / dark theme, in English and German, changes the ICAO type, the callsign / tail number, the pilot
+  nickname and shifts the track so it starts at a given altitude (ft or m), with a *Fetch ground altitude at position* button (terrain height
+  from open-meteo.com, as in the GPX import). One undoable step, saved with the recording.
+- Host API (additive, still v1): `ctx.tracks.patch(id, { callsign, nickname, icaoType })`.
+
 - **Ground height** (plugin `ground-height`): the track menu gets *Ground height: show / hide* (terrain drawn in the track's ALT lane,
   looked up once from open-meteo.com and cached, undoable) and *Altitude and ground profile…*, a large zoomable and scrollable
   diagram of one aircraft's altitude, the terrain and the height above ground. Based on the new component

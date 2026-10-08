@@ -6,6 +6,8 @@
 import { clipTrack } from '../track-clip.js';
 
 export const API_VERSION = 1;
+/** Text fields of a track that `ctx.tracks.patch` may write. */
+const PATCHABLE_FIELDS = ['callsign', 'nickname', 'icaoType'];
 const ACTIVATIONS = new Set(['onStartup', 'onAction', 'onTrackLoad']);
 
 /** Validates a manifest object; returns a list of problems (empty = valid). */
@@ -223,6 +225,18 @@ export class PluginHost {
         registerRange: (fn) => own(s.addRangeProvider(guard(fn))),
         list: () => s.getTracks().map((t) => Object.freeze({ ...t })),
         get: (id) => { const t = s.getTracks().find((x) => x.id === id); return t ? Object.freeze({ ...t }) : null; },
+        /** Writes whitelisted text fields (callsign, nickname, icaoType) on the live track; returns the previous values of the keys that changed. Wrap in ctx.exec for undo. */
+        patch: (id, fields) => {
+          const t = s.getTracks().find((x) => x.id === id);
+          if (!t) throw new Error(`No track "${id}".`);
+          const before = {};
+          for (const [key, value] of Object.entries(fields || {})) {
+            if (!PATCHABLE_FIELDS.includes(key)) throw new Error(`Track field "${key}" cannot be patched.`);
+            if (typeof value !== 'string') throw new Error(`Track field "${key}" must be a string.`);
+            if (t[key] !== value) { before[key] = t[key]; t[key] = value; }
+          }
+          return before;
+        },
       }),
       exec: (command) => s.exec(command),
       /** SVG text of an icon named in the manifest's `icons`, or '' if it could not be loaded. */

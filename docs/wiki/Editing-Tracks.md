@@ -79,6 +79,18 @@ Shows the terrain under a track and opens a large altitude / ground height diagr
 brown terrain profile in the ALT lane, not saved into the recording. Everything about it, including what is sent to
 open-meteo.com, is on the page [Ground Height](Ground-Height).
 
+### Edit aircraft type, callsign, nickname, altitude
+
+Opens a small form for one track to correct what the importers or the recorder got wrong: the **aircraft type** (ICAO
+designator, 2-4 letters or digits, e.g. `C172`), the **callsign / tail number** (up to 16 characters; the `.jfs` format has
+one field for both, JoinFS shows it as the registration), the **pilot nickname** (up to 32 characters) and the **starting
+altitude**. The altitude moves the whole track up or down so that its first position lies at the value you enter (feet or
+metres; the field shows the current value). **Fetch ground altitude at position** looks up the terrain height at the track's first
+position online and enters it, like the field elevation in the GPX import; only on click, and the position is sent, rounded to about
+11 m, to open-meteo.com. **Apply** is enabled when something changed and everything is valid; the change is
+one undoable step and is saved with the recording. The form follows the light / dark setting and the page language, and uses
+one column on phones.
+
 ## Not editable (yet)
 
 Adding, deleting or moving single gear, flaps or light events is planned as a further plugin. See

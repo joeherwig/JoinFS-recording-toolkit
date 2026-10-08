@@ -11,6 +11,7 @@ const STYLE = `
     width: min(1280px, 96vw); height: min(820px, 92vh); max-width: none; max-height: none;
   }
   dialog[open] { display: flex; flex-direction: column; }
+  dialog.compact { width: min(36rem, 96vw); height: auto; max-height: 92vh; }
   dialog.max { width: 100vw; height: 100vh; border-radius: 0; }
   .modal-head .tools { display: flex; align-items: center; }
   .modal-head svg { width: 20px; height: 20px; }
@@ -24,11 +25,11 @@ const STYLE = `
 `;
 
 /**
- * Opens the modal and returns `{ body, close() }`. `body` is the element to fill (it is a flex column, a single child stretches
+ * Opens the modal (`compact`: only as large as its content, up to 36rem wide) and returns `{ body, close() }`. `body` is the element to fill (it is a flex column, a single child stretches
  * to the available space). `onClose` runs once when the modal is closed by any route. Opening a new one closes the old.
  */
 let current = null;
-export function openPluginModal({ title = '', onClose } = {}) {
+export function openPluginModal({ title = '', onClose, compact = false } = {}) {
   if (current) current.close();
   const host = document.createElement('div');
   host.attachShadow({ mode: 'open' });
@@ -75,6 +76,7 @@ export function openPluginModal({ title = '', onClose } = {}) {
     maxBtn.setAttribute('aria-label', label); maxBtn.title = label; maxBtn.setAttribute('aria-pressed', String(on));
   };
   setMax(false);
+  if (compact) { dialog.classList.add('compact'); maxBtn.hidden = true; }   // sized to the content (a form), no maximise button
   maxBtn.addEventListener('click', () => setMax(!dialog.classList.contains('max')));
   dialog.addEventListener('cancel', (e) => { e.preventDefault(); handle.close(); }); // Esc
   dialog.addEventListener('close', () => handle.close());

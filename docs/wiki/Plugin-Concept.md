@@ -20,7 +20,7 @@ they are missing or broken, so the core still opens, plays and saves with **all 
 
 | Core | Plugin |
 |---|---|
-| neutral track model, formats registry | pin, trim, igc, ground-height |
+| neutral track model, formats registry | pin, trim, igc, ground-height, edit-aircraft |
 | map, timeline, playback | future: event editor, analytics |
 | undo/redo history | |
 | keyboard shortcut service | |
@@ -57,7 +57,7 @@ plugins/<id>/
 
 ## How plugins are found and started
 
-1. `src/plugins/known.js` lists the ids of the first-party plugins this build knows (`pin`, `trim`, `igc`, `ground-height`).
+1. `src/plugins/known.js` lists the ids of the first-party plugins this build knows (`pin`, `trim`, `igc`, `ground-height`, `edit-aircraft`).
 2. At startup the host tries to load all of them in parallel, **without delaying the app**: it fetches
    `plugins/<id>/manifest.json`, validates it, loads the locale files and the icons.
 3. Because the manifest is declarative, the **menu entries appear before any plugin code is loaded**. A plugin
@@ -104,7 +104,11 @@ See [Writing a Plugin](Writing-a-Plugin) for the details.
   (`ui.openModal`). Engine and chart come from the separate repo
   [joinfs-ground-height-webcomponent](https://github.com/joeherwig/joinfs-ground-height-webcomponent), vendored into the plugin folder.
 
-User documentation for pin, trim and ground-height is in [Editing Tracks](Editing-Tracks), for igc in [Saving and Formats](Saving-and-Formats#igc-import).
+- **edit-aircraft:** edits aircraft type (ICAO), callsign / tail number, pilot nickname and the starting altitude of a track in a form
+  (`<jfs-edit-aircraft>`, shown with `ui.openModal`). The text fields are written with `ctx.tracks.patch`, the altitude shift is done on
+  the shared `frames.alt` array; both in one `ctx.exec` command.
+
+User documentation for pin, trim, ground-height and edit-aircraft is in [Editing Tracks](Editing-Tracks), for igc in [Saving and Formats](Saving-and-Formats#igc-import).
 
 ## Roadmap
 

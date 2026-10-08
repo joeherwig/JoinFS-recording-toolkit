@@ -99,12 +99,13 @@ ctx.selection.get()                            the selected track id or null
 ctx.tracks.list() / ctx.tracks.get(id)         read-only copies; track.ext is the live plugin-data object
 ctx.tracks.registerDragGuard(fn(track))        return false to forbid moving the track
 ctx.tracks.registerRange(fn(track))            return { startS, endS } (track time) = the part to show and save, or null
+ctx.tracks.patch(id, { callsign, nickname, icaoType })  writes those text fields on the live track, returns the old values of the ones that changed (wrap in ctx.exec)
 ctx.tracks.clip(track, startS, endS)           a copy cut to the range, variable state seeded at the start; null if empty
 
 ctx.ui.registerTrackAction({ id, label, run({ trackId }) })
 ctx.ui.registerTimelineLayer({ draw(g, { track, top, height, width, toX }) })
 ctx.ui.openDialog(spec)                        floating non-modal dialog; returns { setValues(v), close() }
-ctx.ui.openModal({ title, onClose })           large modal with an empty body for your own element; returns { body, close() }
+ctx.ui.openModal({ title, onClose, compact })  large modal (compact: sized to its content, for forms) with an empty body for your own element; returns { body, close() }
 ctx.ui.requestRedraw()                         ask the views to redraw after a change in your own draft state
 ctx.ui.toast(message)
 
