@@ -7,7 +7,7 @@ track, and save everything as one `.jfs` that JoinFS replays.
 No installation and no build step: it is plain HTML and JavaScript. Your files never leave your computer.
 
 > [!TIP]
-> **Drag and drop:** drag one or **several** `.jfs` and `.gpx` files (even mixed) from your file manager onto the map
+> **Drag and drop:** drag one or **several** `.jfs`, `.gpx` and `.igc` files (even mixed) from your file manager onto the map
 > or the timeline, and they are all imported at once. Each recorded aircraft becomes its own track.
 
 ![The toolkit with three aircraft on the dark map layer](images/overview-dark.png)
@@ -19,6 +19,7 @@ No installation and no build step: it is plain HTML and JavaScript. Your files n
 | open a file, look around, save | [Getting Started](Getting-Started) |
 | understand the map and the timeline | [Map and Timeline](Map-and-Timeline) |
 | move, trim, pin or remove tracks, undo mistakes | [Editing Tracks](Editing-Tracks) |
+| see how high above the ground a flight was | [Ground Height](Ground-Height) |
 | know what ends up in the saved file | [Saving and Formats](Saving-and-Formats) |
 | use the keyboard and mouse faster | [Keyboard and Mouse](Keyboard-and-Mouse) |
 | change the language or the theme | [Language and Theme](Language-and-Theme) |
@@ -37,27 +38,33 @@ No installation and no build step: it is plain HTML and JavaScript. Your files n
 | **Ctrl+Z** / **Ctrl+Shift+Z** | undo / redo |
 | **Ctrl+S** | save |
 | **Esc** | close the open menu or dialog without applying; otherwise clear the selection |
-| right-click a track row | track actions (pin, trim) |
+| right-click a track row | track actions (pin, trim, edit aircraft, ground height) |
 
 All of them, with the mouse gestures, are on [Keyboard and Mouse](Keyboard-and-Mouse). On a Mac use Cmd instead of Ctrl.
 
 ## What it can do
 
-- **Open** `.jfs` recordings (current JoinFS and older ones) and `.gpx` tracks (converted on the fly), several at once.
+- **Open** `.jfs` recordings (current JoinFS and older ones), `.gpx` tracks and `.igc` glider flight logs (both converted on the fly), several at once.
 - **Show** every track's path on a map, coloured by altitude, grey while on the ground, with markers for gear, flaps
   and lights; and as altitude and speed charts on a timeline with a moving playhead.
 - **Play back** all tracks together at 0.5x to 50x.
 - **Edit:** shift a track in time, remove a track, pin a track so it cannot move, trim the start and end of a track.
   Everything is undoable.
+- **Analyse:** show the terrain under a track and a large, zoomable altitude / ground height diagram of one aircraft
+  ([Ground Height](Ground-Height)).
 - **Save** one `.jfs` in the layout current JoinFS reads.
 
-The editing functions beyond the basics (pin, trim) are [plugins](Plugin-Concept): the viewer, playback and saving
+The functions beyond the basics (pin, trim, edit aircraft, ground height) are [plugins](Plugin-Concept): the viewer, playback and saving
 work with every plugin switched off or missing.
 
 ## Related projects
 
 - [joinfs-gpx-to-jfs-webcomponent](https://github.com/joeherwig/joinfs-gpx-to-jfs-webcomponent): the GPX converter
   used for `.gpx` import.
+- [joinfs-igc-to-jfs-webcomponent](https://github.com/joeherwig/joinfs-igc-to-jfs-webcomponent): the IGC converter
+  used for `.igc` import.
+- [joinfs-ground-height-webcomponent](https://github.com/joeherwig/joinfs-ground-height-webcomponent): ground height
+  lookup and the altitude / ground diagram.
 - [joinfs-map-websocket-webcomponent](https://github.com/joeherwig/joinfs-map-websocket-webcomponent): a live map for
   JoinFS.
 

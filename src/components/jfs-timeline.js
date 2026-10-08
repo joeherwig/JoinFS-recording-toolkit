@@ -521,10 +521,12 @@ export class JfsTimeline extends HTMLElement {
       ctx.clip();
     }
 
+    let altitudeY = null; // metres -> y in this row, on the ALT lane's scale; handed to the plugin layers
     if (track.showAltitude && level.times.length) {
       let altMin = Infinity, altMax = -Infinity;
       for (let i = 0; i < level.min.length; i++) { if (level.min[i] < altMin) altMin = level.min[i]; if (level.max[i] > altMax) altMax = level.max[i]; }
       if (altMax === altMin) altMax = altMin + 1;
+      altitudeY = (metres) => rowTop + 2 + laneH * (1 - (metres * 3.28084 - altMin) / (altMax - altMin));
       ctx.globalAlpha = alpha * 0.55;
       ctx.beginPath();
       let started = false;
@@ -584,7 +586,7 @@ export class JfsTimeline extends HTMLElement {
       const toX = (trackTimeS) => (trackTimeS + offsetOverride - visibleStart) * pps;
       for (const layer of this._store.timelineLayers) {
         ctx.save();
-        try { layer.draw(ctx, { track, top: rowTop, height: ROW_HEIGHT, width: canvasWidth, toX }); } catch (err) {
+        try { layer.draw(ctx, { track, top: rowTop, height: ROW_HEIGHT, width: canvasWidth, toX, altitudeY }); } catch (err) {
           console.warn('Timeline layer failed:', err);
         }
         ctx.restore();

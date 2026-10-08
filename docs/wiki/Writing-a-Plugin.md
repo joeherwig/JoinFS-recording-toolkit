@@ -92,23 +92,25 @@ noun or number. German uses the informal "du".
 ctx.id, ctx.apiVersion
 ctx.exec(command)                              the only way to change data; command = { label, do(), undo() }
 ctx.icon(name)                                 SVG text of an icon declared in the manifest, or ''
-ctx.i18n.t(key, params)
+ctx.i18n.t(key, params)                        ctx.i18n.locale is the UI language code, e.g. 'de'
 ctx.time.get() / ctx.time.set(seconds)         the playhead, in project time
 ctx.selection.get()                            the selected track id or null
 
 ctx.tracks.list() / ctx.tracks.get(id)         read-only copies; track.ext is the live plugin-data object
 ctx.tracks.registerDragGuard(fn(track))        return false to forbid moving the track
 ctx.tracks.registerRange(fn(track))            return { startS, endS } (track time) = the part to show and save, or null
+ctx.tracks.patch(id, { callsign, nickname, icaoType })  writes those text fields on the live track, returns the old values of the ones that changed (wrap in ctx.exec)
 ctx.tracks.clip(track, startS, endS)           a copy cut to the range, variable state seeded at the start; null if empty
 
 ctx.ui.registerTrackAction({ id, label, run({ trackId }) })
 ctx.ui.registerTimelineLayer({ draw(g, { track, top, height, width, toX }) })
 ctx.ui.openDialog(spec)                        floating non-modal dialog; returns { setValues(v), close() }
+ctx.ui.openModal({ title, onClose, compact })  large modal (compact: sized to its content, for forms) with an empty body for your own element; returns { body, close() }
 ctx.ui.requestRedraw()                         ask the views to redraw after a change in your own draft state
 ctx.ui.toast(message)
 
 ctx.io.registerExportTransform({ id, order, apply(tracks) })   order: lowest first, default 100
-ctx.io.registerFormat(spec)                    see src/formats/registry.js
+ctx.io.registerFormat(spec)                    { id, label, extensions, sniff(u8, name), decode(buffer, decodeCtx) }, see src/formats/registry.js
 
 ctx.shortcuts.register({ id, key, primary, shift, allowInTyping, run })
 ```
@@ -127,7 +129,9 @@ that call. Everything you register is removed automatically when the plugin is s
 
 ### Timeline layers
 
-`draw(g, ctx)` gets a 2D canvas context, the track, the row's `top` and `height`, the canvas `width` and `toX`.
+`draw(g, ctx)` gets a 2D canvas context, the track, the row's `top` and `height`, the canvas `width`, `toX`, and `altitudeY`:
+`altitudeY(metres)` returns the y position on the scale of the track's **ALT lane**, so a layer can draw ground height or a limit
+that lines up with the altitude chart; it is `null` while the lane is switched off.
 The canvas is shared by all rows, so stay inside your row. Use neutral or theme-friendly colours; the app is used in
 light and dark themes.
 
@@ -136,6 +140,39 @@ light and dark themes.
 `apply(tracks)` runs when saving, on **copies** with project time already applied and the part before 00:00 already
 cut. Return the tracks to save (drop a track by leaving it out). After all transforms the earliest frame is moved to
 time 0. The live project is never modified by saving.
+
+### Formats that need a converter dialog
+
+`decode(buffer, decodeCtx)` receives `decodeCtx.file` (the dropped or picked file) and `decodeCtx.convert(file, opts)`. It opens
+the toolkit's converter dialog with a web component of your own and resolves `{ tracks, warnings }` (the converter's `.jfs`
+result, decoded), or `null` if the user closes the dialog:
+
+```js
+async decode(_buffer, decodeCtx) {
+  return decodeCtx.convert(decodeCtx.file, {
+    tag: 'my-converter',                                        // custom element with loadFile(file) and a 'converted' event
+    script: new URL('./vendor/my-converter.js', import.meta.url).href,
+    title: ctx.i18n.t('dialog.title'),
+    attributes: { /* extra attributes */ },
+  });
+}
+```
+
+The dialog loads the GPX converter first (your component may build on it) and always sets `build="fs2024"`, `lang` and
+`no-url-params`, so the target-format question is not asked. See `plugins/igc` for a complete example.
+
+### Modal windows
+
+```js
+const modal = ctx.ui.openModal({ title: 'Altitude and ground height', onClose() { /* optional */ } });
+modal.body.appendChild(myElement);          // a flex column: a single child stretches over the whole window
+```
+
+A large `<dialog>` (up to 1280 x 820 px) for something that needs room, such as a chart. It is modal: the page behind is
+inert and its global shortcuts are suspended while it is open. **Esc** and the × close it; `modal.close()` closes it from
+code. Only one modal is open at a time. The window sets the page's theme variables, so an element that uses
+`currentColor` follows light and dark. `plugins/ground-height` is a complete example, including how a plugin loads its
+vendored web component.
 
 ### Dialogs
 

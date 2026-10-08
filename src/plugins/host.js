@@ -6,6 +6,8 @@
 import { clipTrack } from '../track-clip.js';
 
 export const API_VERSION = 1;
+/** Text fields of a track that `ctx.tracks.patch` may write. */
+const PATCHABLE_FIELDS = ['callsign', 'nickname', 'icaoType'];
 const ACTIVATIONS = new Set(['onStartup', 'onAction', 'onTrackLoad']);
 
 /** Validates a manifest object; returns a list of problems (empty = valid). */
@@ -23,7 +25,7 @@ export class PluginHost {
   /**
    * env: { baseUrl, locale, fetchJson(url), fetchText(url), importModule(url), storage: {get(key), set(key, value)}, warn(message) }
    * services: { formats, shortcuts, getTracks(), exec(command), toast(message), t(key, params), addMessages(prefix, dict),
-   *   addDragGuard(fn), addRangeProvider(fn), addTimelineLayer(layer), requestRedraw(), openDialog(spec), getTime(), setTime(s), getSelectedId() }
+   *   addDragGuard(fn), addRangeProvider(fn), addTimelineLayer(layer), requestRedraw(), openDialog(spec), openModal(spec), getTime(), setTime(s), getSelectedId() }
    */
   constructor(env, services) {
     this._env = env;
@@ -172,7 +174,7 @@ export class PluginHost {
     if (!(await this.activate(pluginId))) return false;
     const action = this._trackActions.find((a) => a.pluginId === pluginId && a.id === actionId && !a.declared);
     if (!action) { this._env.warn(`Plugin "${pluginId}" registered no action "${actionId}".`); return false; }
-    action.run({ trackId });
+    await action.run({ trackId });             // plugins may return a promise (a lookup); a failure is theirs to report
     return true;
   }
 
@@ -223,13 +225,26 @@ export class PluginHost {
         registerRange: (fn) => own(s.addRangeProvider(guard(fn))),
         list: () => s.getTracks().map((t) => Object.freeze({ ...t })),
         get: (id) => { const t = s.getTracks().find((x) => x.id === id); return t ? Object.freeze({ ...t }) : null; },
+        /** Writes whitelisted text fields (callsign, nickname, icaoType) on the live track; returns the previous values of the keys that changed. Wrap in ctx.exec for undo. */
+        patch: (id, fields) => {
+          const t = s.getTracks().find((x) => x.id === id);
+          if (!t) throw new Error(`No track "${id}".`);
+          const before = {};
+          for (const [key, value] of Object.entries(fields || {})) {
+            if (!PATCHABLE_FIELDS.includes(key)) throw new Error(`Track field "${key}" cannot be patched.`);
+            if (typeof value !== 'string') throw new Error(`Track field "${key}" must be a string.`);
+            if (t[key] !== value) { before[key] = t[key]; t[key] = value; }
+          }
+          return before;
+        },
       }),
       exec: (command) => s.exec(command),
       /** SVG text of an icon named in the manifest's `icons`, or '' if it could not be loaded. */
       icon: (name) => (entry.assets && entry.assets[name]) || '',
       time: Object.freeze({ get: () => s.getTime(), set: (seconds) => s.setTime(seconds) }),
       selection: Object.freeze({ get: () => s.getSelectedId() }),
-      i18n: Object.freeze({ t: (key, params) => s.t(`plugin.${entry.id}.${key}`, params) }),
+      /** t(key, params) looks up the plugin's own strings; locale is the UI language code (e.g. 'de'). */
+      i18n: Object.freeze({ t: (key, params) => s.t(`plugin.${entry.id}.${key}`, params), locale: this._env.locale || 'en' }),
       shortcuts: Object.freeze({
         register: (spec) => own(s.shortcuts.register({ ...spec, id: `${entry.id}:${spec.id}`, run: guard(spec.run) })),
       }),
@@ -250,6 +265,12 @@ export class PluginHost {
           const bar = s.openDialog({ ...spec, onChange: guard(spec.onChange || (() => {})), onButton: guard(spec.onButton || (() => {})) });
           own(() => bar.close());
           return bar;
+        },
+        /** Large modal with an empty body for the plugin's own element (a chart, ...); returns { body, close() }. */
+        openModal: (spec) => {
+          const modal = s.openModal({ ...spec, onClose: guard(spec.onClose || (() => {})) });
+          own(() => modal.close());
+          return modal;
         },
         registerTrackAction: (spec) => {
           // replaces the manifest-declared placeholder with the live action

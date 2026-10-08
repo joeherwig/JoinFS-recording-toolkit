@@ -28,13 +28,24 @@ What the toolkit does not do (yet), so nothing comes as a surprise.
 - **The aircraft on the map is a simple rotated arrow,** not an aircraft-type-shaped icon.
 - **No Plugins dialog yet:** switching a plugin off or adding one by URL is not available in the interface.
 
+## Ground height
+
+- **Needs an internet connection and sends positions to open-meteo.com** (a thinned-out sample of the track, never the
+  whole recording). Offline, or when the service is busy, a notice says so and nothing changes.
+- **It is an estimate.** The terrain model has a 90 m grid and the track is sampled about every 250 m (at most about 600
+  points per track, so very long flights are sampled more coarsely). Open sea has no data and counts as 0 m. Bridges,
+  buildings and trees are not in the model.
+- **Not saved.** The looked-up ground height is a working aid of the open page, like a pin.
+
 ## Replaying in JoinFS
 
 - **Several aircraft in one replay can look wrong on websocket-fed maps.** JoinFS identifies websocket updates by the
   owner node, which replayed aircraft share, so a live map fed from the websocket may show only one of them, stop
   moving, or jump. The saved file is fine; this is a JoinFS-side issue and is not fixed by the toolkit.
 
-## GPX
+## GPX and IGC
 
 - **GPX import needs the converter dialog.** The track must carry timestamps, and you confirm aircraft and options in
   the embedded converter instead of getting a silent automatic conversion. See [Saving and Formats](Saving-and-Formats).
+- **IGC logs are read as one flight per file,** with the GNSS altitude (pressure altitude for 2D fixes). The security signature
+  is not checked, and no task, turn points or events are imported. The ICAO type is the generic `GLID` unless you change it.

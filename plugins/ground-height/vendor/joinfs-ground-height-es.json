@@ -1,0 +1,20 @@
+{
+  "legend.aircraft": "Altitud de la aeronave",
+  "legend.ground": "Altura del terreno",
+  "legend.agl": "Altura sobre el terreno",
+  "tip.time": "Tiempo",
+  "tip.altitude": "Altitud",
+  "tip.ground": "Terreno",
+  "tip.agl": "Sobre el terreno",
+  "btn.zoomIn": "Acercar",
+  "btn.zoomOut": "Alejar",
+  "btn.fit": "Mostrar todo",
+  "btn.unit": "Cambiar la unidad (ahora {unit})",
+  "hint": "Rueda: zoom · Ctrl+rueda o arrastrar: desplazar · Clic: mover el cursor de reproducción · Doble clic: mostrar todo",
+  "aria.chart": "Altitud y altura del terreno de {name}, de {from} a {to}",
+  "noGround": "No hay altura del terreno disponible: solo se muestra la altitud de la aeronave.",
+  "stat.minAgl": "Altura mínima sobre el terreno: {value}",
+  "stat.maxAlt": "Altitud máxima: {value}",
+  "stat.maxGround": "Terreno más alto: {value}",
+  "empty": "No hay datos que mostrar."
+}

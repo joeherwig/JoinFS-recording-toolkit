@@ -1,0 +1,20 @@
+{
+  "legend.aircraft": "항공기 고도",
+  "legend.ground": "지면 높이",
+  "legend.agl": "지상고",
+  "tip.time": "시간",
+  "tip.altitude": "고도",
+  "tip.ground": "지면",
+  "tip.agl": "지상 높이",
+  "btn.zoomIn": "확대",
+  "btn.zoomOut": "축소",
+  "btn.fit": "전체 보기",
+  "btn.unit": "단위 변경 (현재 {unit})",
+  "hint": "휠: 확대/축소 · Ctrl+휠 또는 드래그: 스크롤 · 클릭: 재생 위치 이동 · 더블 클릭: 전체 보기",
+  "aria.chart": "{name}의 고도와 지면 높이, {from}부터 {to}까지",
+  "noGround": "지면 높이를 사용할 수 없습니다. 항공기 고도만 표시됩니다.",
+  "stat.minAgl": "최저 지상고: {value}",
+  "stat.maxAlt": "최고 고도: {value}",
+  "stat.maxGround": "최고 지면: {value}",
+  "empty": "표시할 데이터가 없습니다."
+}

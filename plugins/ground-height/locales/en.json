@@ -1,0 +1,17 @@
+{
+  "action.toggle": "Ground height: show / hide",
+  "action.profile": "Altitude and ground profile…",
+  "modal.title": "Altitude and ground height: {name}",
+  "toast.looking": "Looking up the ground height of {name}. The positions are sent to open-meteo.com.",
+  "toast.busy": "The ground height of {name} is already being looked up.",
+  "toast.shown": "Ground height of {name} is shown in the altitude lane.",
+  "toast.shownNoLane": "Ground height of {name} is on, but the altitude lane (ALT) is switched off, so it is not visible.",
+  "toast.hidden": "Ground height of {name} is hidden.",
+  "toast.error.network": "The ground height service could not be reached. Check the internet connection.",
+  "toast.error.http": "The ground height service answered with an error.",
+  "toast.error.rateLimited": "The ground height service is busy (request limit). Try again in a few minutes.",
+  "toast.error.badResponse": "The ground height service sent an answer that could not be used.",
+  "toast.error.noPositions": "{name} has no usable positions, so there is no ground height.",
+  "toast.error.other": "The ground height could not be looked up.",
+  "toast.noLibrary": "The ground height component could not be loaded."
+}

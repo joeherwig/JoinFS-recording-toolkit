@@ -9,6 +9,7 @@ import { formats } from './formats/index.js';
 import { PluginHost } from './plugins/host.js';
 import { KNOWN_PLUGINS } from './plugins/known.js';
 import { t } from './i18n.js';
+import { openPluginModal } from './components/jfs-plugin-modal.js';
 
 async function main() {
   initTheme();
@@ -101,6 +102,7 @@ async function startPlugins(store, toolbarEl) {
     addTimelineLayer: (layer) => store.addTimelineLayer(layer),
     requestRedraw: () => store.requestRedraw(),
     openDialog: (spec) => toolbarEl.openDialog(spec),
+    openModal: (spec) => openPluginModal(spec),
     getTime: () => store.currentTimeS,
     setTime: (seconds) => store.setCurrentTime(seconds),
     getSelectedId: () => store.selectedTrackId,

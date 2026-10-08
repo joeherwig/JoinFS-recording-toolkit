@@ -16,6 +16,7 @@ export async function loadPlugin(id, { tracks = [], locale = 'en', storage = {} 
   const layers = new Set();
   const ranges = new Set();
   const dialogs = [];
+  const modals = [];
   const messages = {};
   const redraws = { count: 0 };
   const state = { time: 0, selected: tracks[0] ? tracks[0].id : null };
@@ -29,8 +30,9 @@ export async function loadPlugin(id, { tracks = [], locale = 'en', storage = {} 
     storage: { get: (k) => storage[k] ?? null, set: (k, v) => { storage[k] = v; } },
     warn: (m) => warnings.push(m),
   };
+  const formats = new FormatRegistry();
   const services = {
-    formats: new FormatRegistry(), shortcuts: new Shortcuts(),
+    formats, shortcuts: new Shortcuts(),
     getTracks: () => tracks,
     exec: (c) => history.exec(c),
     toast: (m) => toasts.push(m),
@@ -46,6 +48,11 @@ export async function loadPlugin(id, { tracks = [], locale = 'en', storage = {} 
       dialogs.push(bar);
       return bar;
     },
+    openModal: (spec) => {
+      const modal = { spec, closed: false, body: { children: [], appendChild(c) { this.children.push(c); } }, close() { if (this.closed) return; this.closed = true; if (spec.onClose) spec.onClose(); } };
+      modals.push(modal);
+      return modal;
+    },
     getTime: () => state.time,
     setTime: (s) => { state.time = s; },
     getSelectedId: () => state.selected,
@@ -53,10 +60,11 @@ export async function loadPlugin(id, { tracks = [], locale = 'en', storage = {} 
   const host = new PluginHost(env, services);
   await host.loadAll([id]);
   return {
-    host, history, redraws, warnings, toasts, guards, layers, ranges, dialogs, state, messages, tracks,
+    host, history, redraws, formats, warnings, toasts, guards, layers, ranges, dialogs, modals, state, messages, tracks,
     rangeOf: (track) => { for (const r of ranges) { const v = r(track); if (v) return v; } return null; },
     canDrag: (track) => [...guards].every((g) => g(track) !== false),
     lastDialog: () => dialogs[dialogs.length - 1],
+    lastModal: () => modals[modals.length - 1],
     status: () => host.status().find((p) => p.id === id),
   };
 }
