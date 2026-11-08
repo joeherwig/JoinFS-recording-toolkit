@@ -21,9 +21,8 @@ What the toolkit does not do (yet), so nothing comes as a surprise.
 
 - **Event markers exist for gear, flaps and lights only.** Other recorded variables are kept and saved but do not
   produce a marker.
-- **Single events cannot be edited yet.** Adding, deleting or moving gear, flaps and light events is planned as a
-  plugin (see the roadmap in [Plugin Concept](Plugin-Concept#roadmap)). Today you can move, remove, pin and trim whole
-  tracks.
+- **Only gear, flaps and light events can be edited** (event editor plugin); other recorded variables and sim events are kept
+  untouched. Edits are applied with **Done**, not live: map and timeline show the draft only in the editor lanes until then.
 - **A trimmed range is not marked on the map beyond hiding the cut part;** plugins have no map layer hook yet.
 - **The aircraft on the map is a simple rotated arrow,** not an aircraft-type-shaped icon.
 - **No Plugins dialog yet:** switching a plugin off or adding one by URL is not available in the interface.

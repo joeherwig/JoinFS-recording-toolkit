@@ -12,7 +12,9 @@ import { buildLodPyramid, pickLodLevel, altColor, desaturate, horizontalSpeedKt,
 import { t } from '../i18n.js';
 import { showTrackMenu } from '../track-menu.js';
 
-const ROW_HEIGHT = 56;
+const DEFAULT_ROW_HEIGHT = 56;
+const MIN_ROW_HEIGHT = 40;
+const MAX_ROW_HEIGHT = 360;
 const RULER_HEIGHT = 24;
 const SIDEBAR_WIDTH = 190;
 const MIN_PPS = 0.01, MAX_PPS = 200;
@@ -30,7 +32,7 @@ const STYLE = `
   #ruler { flex: 1; display: block; height: ${RULER_HEIGHT}px; border-bottom: 1px solid var(--border, #262b36); touch-action: none; }
   .scroll-body { display: flex; }
   .sidebar { width: ${SIDEBAR_WIDTH}px; flex: none; border-right: 1px solid var(--border, #262b36); }
-  .row { height: ${ROW_HEIGHT}px; box-sizing: border-box; display: flex; align-items: center; gap: 6px; padding: 0 6px; border-bottom: 1px solid var(--border, #1c2129); cursor: pointer; }
+  .row { height: var(--row-h, ${DEFAULT_ROW_HEIGHT}px); box-sizing: border-box; display: flex; align-items: center; gap: 6px; padding: 0 6px; border-bottom: 1px solid var(--border, #1c2129); cursor: pointer; }
   .row.selected { background: color-mix(in srgb, var(--fg, #e2e8f0) 8%, transparent); }
   .row .swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
   .row .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -56,6 +58,8 @@ export class JfsTimeline extends HTMLElement {
         </select>
         <button id="zoomOut" title="${t('timeline.zoomOut')}" aria-label="${t('timeline.zoomOut')}">−</button>
         <button id="zoomIn" title="${t('timeline.zoomIn')}" aria-label="${t('timeline.zoomIn')}">+</button>
+        <button id="rowsShorter" title="${t('timeline.rowsShorter')}" aria-label="${t('timeline.rowsShorter')}">↕−</button>
+        <button id="rowsTaller" title="${t('timeline.rowsTaller')}" aria-label="${t('timeline.rowsTaller')}">↕+</button>
         <button id="menuBtn" title="${t('timeline.trackMenu')}" aria-label="${t('timeline.trackMenu')}" aria-haspopup="menu" hidden>⋮</button>
         <span class="time-readout" id="timeReadout">0:00</span>
       </div>
@@ -84,6 +88,7 @@ export class JfsTimeline extends HTMLElement {
     this._timeReadout = this._root.getElementById('timeReadout');
     this._store = null;
     this._pixelsPerSecond = 5;
+    this._userRowHeight = DEFAULT_ROW_HEIGHT; // vertical zoom: the height the user chose for a track row, in px
     this._scrollTimeS = 0;
     this._lod = new Map(); // trackId -> { alt: pyramid, speed: pyramid }
     this._drag = null;
@@ -95,6 +100,8 @@ export class JfsTimeline extends HTMLElement {
 
     this._root.getElementById('playBtn').addEventListener('click', () => this._togglePlay());
     this._root.getElementById('rateSel').addEventListener('change', (e) => this._store && this._store.setPlaybackRate(parseFloat(e.target.value)));
+    this._root.getElementById('rowsShorter').addEventListener('click', () => this._zoomRows(1 / 1.4));
+    this._root.getElementById('rowsTaller').addEventListener('click', () => this._zoomRows(1.4));
     this._root.getElementById('zoomOut').addEventListener('click', () => this._zoomAround(this._canvasWrap.clientWidth / 2, 0.5));
     this._menuBtn = this._root.getElementById('menuBtn');
     this._menuBtn.addEventListener('click', () => {
@@ -107,6 +114,13 @@ export class JfsTimeline extends HTMLElement {
 
     this._canvasWrap.addEventListener('wheel', (e) => this._onWheel(e), { passive: false });
     this._ruler.addEventListener('wheel', (e) => this._onWheel(e), { passive: false });
+    // over the track names and lane buttons: the wheel scrolls the rows (native), Shift + wheel zooms them vertically
+    this._rowsEl.addEventListener('wheel', (e) => {
+      if (!e.shiftKey) return;
+      e.preventDefault();
+      const d = e.deltaY || e.deltaX;   // some browsers turn Shift + wheel into a horizontal delta
+      if (d) this._zoomRows(d < 0 ? 1.15 : 1 / 1.15);
+    }, { passive: false });
     this._fx.addEventListener('pointerdown', (e) => this._onRowPointerDown(e));
     this._ruler.addEventListener('pointerdown', (e) => this._startScrubberDrag(e));
   }
@@ -225,6 +239,7 @@ export class JfsTimeline extends HTMLElement {
 
   _renderRows() {
     if (!this._store) return;
+    this._syncRowHeight();
     const tracks = this._store.project.tracks;
     this._emptyHint.style.display = tracks.length === 0 ? 'flex' : 'none';
     this._updateMenuButton();
@@ -265,7 +280,9 @@ export class JfsTimeline extends HTMLElement {
 
   _onWheel(e) {
     e.preventDefault();
-    if (e.shiftKey) {
+    if (e.altKey) {
+      this._zoomRows(e.deltaY < 0 ? 1.15 : 1 / 1.15);          // Alt+wheel: vertical zoom
+    } else if (e.shiftKey) {
       // Plain wheel already means "zoom" over the canvas/ruler (confirmed behavior, see
       // REQUIREMENTS.md), so the native scrollbar never receives a plain wheel event there to
       // scroll vertically with - Shift+wheel is the escape hatch for that (dragging the native
@@ -279,6 +296,27 @@ export class JfsTimeline extends HTMLElement {
       const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
       this._zoomAround(e.clientX - rect.left, factor);
     }
+  }
+
+  /**
+   * Height of a track row: the user's vertical zoom, scaled up when a plugin asks for taller rows while its mode is active
+   * (event editor). The request replaces the default height as the starting point, the zoom still works on top of it.
+   */
+  get _rowHeight() {
+    let base = DEFAULT_ROW_HEIGHT;
+    if (this._store) for (const r of this._store.rowHeightRequests) base = Math.max(base, r);
+    return Math.round(Math.min(MAX_ROW_HEIGHT * 2, Math.max(MIN_ROW_HEIGHT, base * (this._userRowHeight / DEFAULT_ROW_HEIGHT))));
+  }
+
+  _syncRowHeight() { this.style.setProperty('--row-h', this._rowHeight + 'px'); }
+
+  /** Vertical zoom: scales the height of every track row (the lanes in it follow). */
+  _zoomRows(factor) {
+    const h = Math.round(Math.min(MAX_ROW_HEIGHT, Math.max(MIN_ROW_HEIGHT, this._userRowHeight * factor)));
+    if (h === this._userRowHeight) return;
+    this._userRowHeight = h;
+    this._syncRowHeight();
+    this._scheduleDraw();
   }
 
   _zoomAround(px, factor) {
@@ -326,7 +364,7 @@ export class JfsTimeline extends HTMLElement {
     if (rowEl) trackId = rowEl.dataset.trackId;
     else if (path.includes(this._fx)) {
       const y = e.clientY - this._fx.getBoundingClientRect().top;
-      const tr = this._store.project.tracks[Math.floor(y / ROW_HEIGHT)];
+      const tr = this._store.project.tracks[Math.floor(y / this._rowHeight)];
       trackId = tr && tr.id;
     }
     if (!trackId) return;
@@ -357,10 +395,50 @@ export class JfsTimeline extends HTMLElement {
     if (!this._store) return;
     const rect = this._fx.getBoundingClientRect();
     const y = e.clientY - rect.top;
-    const rowIndex = Math.floor(y / ROW_HEIGHT);
+    const rowIndex = Math.floor(y / this._rowHeight);
     const track = this._store.project.tracks[rowIndex];
-    if (!track || !this._store.canDrag(track)) return;
+    if (!track) return;
+    if (this._offerToPlugins(e, track, rowIndex)) return;
+    if (!this._store.canDrag(track)) return;
     this._startRowDrag(e, track.id, track.timeOffsetS);
+  }
+
+  /** What a plugin's pointer handler is told about a gesture: row-local pixels plus the time under the pointer. */
+  _pointerInfo(e, track, rowIndex) {
+    const rect = this._fx.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    return {
+      track, x, y: e.clientY - rect.top - rowIndex * this._rowHeight, rowHeight: this._rowHeight,
+      timeS: this._scrollTimeS + x / this._pixelsPerSecond - track.timeOffsetS,
+      secondsPerPixel: 1 / this._pixelsPerSecond,
+      pointerType: e.pointerType, shiftKey: e.shiftKey,
+    };
+  }
+
+  /** Lets plugins claim the gesture (Host API registerTimelinePointer); true when one did. */
+  _offerToPlugins(e, track, rowIndex) {
+    if (!this._store.timelinePointers.size || (e.pointerType === 'mouse' && e.button !== 0)) return false;
+    let session = null;
+    for (const handler of this._store.timelinePointers) {
+      try { session = handler.pointerdown(this._pointerInfo(e, track, rowIndex)); } catch (err) { console.warn('Timeline pointer handler failed:', err); }
+      if (session) break;
+    }
+    if (!session) return false;
+    e.preventDefault();
+    const id = e.pointerId;
+    try { this._fx.setPointerCapture(id); } catch { /* window listeners below cover it */ }
+    const end = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onCancel);
+    };
+    const onMove = (ev) => { if (ev.pointerId === id) { session.move(this._pointerInfo(ev, track, rowIndex)); this._scheduleDraw(); } };
+    const onUp = (ev) => { if (ev.pointerId === id) { end(); session.up(this._pointerInfo(ev, track, rowIndex)); this._scheduleDraw(); } };
+    const onCancel = (ev) => { if (ev.pointerId === id) { end(); session.cancel(); this._scheduleDraw(); } };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onCancel);
+    return true;
   }
 
   _startRowDrag(e, trackId, startOffsetS) {
@@ -392,7 +470,7 @@ export class JfsTimeline extends HTMLElement {
   _resizeCanvases() {
     const width = this._scrollArea.clientWidth - SIDEBAR_WIDTH;
     const trackCount = this._store ? this._store.project.tracks.length : 0;
-    const contentHeight = Math.max(trackCount * ROW_HEIGHT, this._scrollArea.clientHeight - RULER_HEIGHT);
+    const contentHeight = Math.max(trackCount * this._rowHeight, this._scrollArea.clientHeight - RULER_HEIGHT);
     const key = `${width}x${contentHeight}`;
     if (key === this._lastSizeKey) return;
     this._lastSizeKey = key;
@@ -480,14 +558,14 @@ export class JfsTimeline extends HTMLElement {
     const visibleDuration = w / pps;
 
     tracks.forEach((track, rowIndex) => {
-      const rowTop = rowIndex * ROW_HEIGHT;
+      const rowTop = rowIndex * this._rowHeight;
       const dim = this._store.selectedTrackId && this._store.selectedTrackId !== track.id;
       const offset = this._drag && this._drag.trackId === track.id
         ? this._drag.startOffsetS + (this._drag.previewDx || 0) / pps
         : track.timeOffsetS;
       this._drawRow(ctx, track, rowTop, visibleStart, visibleDuration, pps, dim, offset, w);
       ctx.strokeStyle = this._ink(0.1);
-      ctx.beginPath(); ctx.moveTo(0, rowTop + ROW_HEIGHT); ctx.lineTo(w, rowTop + ROW_HEIGHT); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, rowTop + this._rowHeight); ctx.lineTo(w, rowTop + this._rowHeight); ctx.stroke();
     });
   }
 
@@ -505,7 +583,7 @@ export class JfsTimeline extends HTMLElement {
     const lod = this._lodFor(track);
     const level = pickLodLevel(lod.alt, visibleDuration, pps);
     const speedLevel = pickLodLevel(lod.speed, visibleDuration, pps);
-    const laneH = ROW_HEIGHT - 4;
+    const laneH = this._rowHeight - 4;
     const baseColor = dim ? desaturate(track.color.startsWith('#') ? this._hexToHsl(track.color) : track.color) : track.color;
     const alpha = dim ? 0.35 : 0.9;
 
@@ -517,7 +595,7 @@ export class JfsTimeline extends HTMLElement {
       const cx0 = Math.max(-1, (range.startS + offsetOverride - visibleStart) * pps);
       const cx1 = Number.isFinite(range.endS) ? (range.endS + offsetOverride - visibleStart) * pps : canvasWidth + 1;
       ctx.beginPath();
-      ctx.rect(cx0, rowTop, Math.max(0, cx1 - cx0), ROW_HEIGHT);
+      ctx.rect(cx0, rowTop, Math.max(0, cx1 - cx0), this._rowHeight);
       ctx.clip();
     }
 
@@ -566,7 +644,10 @@ export class JfsTimeline extends HTMLElement {
 
     // Gated by the track's own showEvents toggle (EVT button), not focus/selection - see jfs-map.js's
     // matching change for why (markers were invisible by default since nothing starts selected).
-    if (track.showEvents && track.events && track.events.length) {
+    const eventsReplaced = this._store && [...this._store.timelineLayers].some((l) => {
+      try { return l.replacesEvents && l.replacesEvents(track); } catch { return false; }
+    });
+    if (track.showEvents && !eventsReplaced && track.events && track.events.length) {
       ctx.globalAlpha = alpha;
       ctx.fillStyle = this._ink(0.95);
       for (const evt of track.events) {
@@ -586,7 +667,7 @@ export class JfsTimeline extends HTMLElement {
       const toX = (trackTimeS) => (trackTimeS + offsetOverride - visibleStart) * pps;
       for (const layer of this._store.timelineLayers) {
         ctx.save();
-        try { layer.draw(ctx, { track, top: rowTop, height: ROW_HEIGHT, width: canvasWidth, toX, altitudeY }); } catch (err) {
+        try { layer.draw(ctx, { track, top: rowTop, height: this._rowHeight, width: canvasWidth, toX, altitudeY }); } catch (err) {
           console.warn('Timeline layer failed:', err);
         }
         ctx.restore();

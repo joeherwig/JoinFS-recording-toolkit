@@ -20,8 +20,8 @@ they are missing or broken, so the core still opens, plays and saves with **all 
 
 | Core | Plugin |
 |---|---|
-| neutral track model, formats registry | pin, trim, igc, ground-height, edit-aircraft |
-| map, timeline, playback | future: event editor, analytics |
+| neutral track model, formats registry | pin, trim, igc, ground-height, edit-aircraft, event-editor |
+| map, timeline, playback | future: analytics |
 | undo/redo history | |
 | keyboard shortcut service | |
 | import and save, the 00:00 cut | |
@@ -114,8 +114,6 @@ User documentation for pin, trim, ground-height and edit-aircraft is in [Editing
 
 Planned, not built yet:
 
-- **event editor:** add, delete and move gear, flaps and light events (needs the variable frames as typed data in
-  the core first),
 - **analytics:** flight phases, block and air time, climb/cruise/descent, and an optional AI summary (opt-in, bring
   your own key, off by default),
 - **Plugins dialog** to switch plugins on and off and **add a plugin by URL**,

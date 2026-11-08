@@ -4,6 +4,7 @@
 // is injected, so the host runs unchanged under node --test with a fake environment.
 
 import { clipTrack } from '../track-clip.js';
+import * as trackVariables from '../track-variables.js';
 
 export const API_VERSION = 1;
 /** Text fields of a track that `ctx.tracks.patch` may write. */
@@ -25,7 +26,7 @@ export class PluginHost {
   /**
    * env: { baseUrl, locale, fetchJson(url), fetchText(url), importModule(url), storage: {get(key), set(key, value)}, warn(message) }
    * services: { formats, shortcuts, getTracks(), exec(command), toast(message), t(key, params), addMessages(prefix, dict),
-   *   addDragGuard(fn), addRangeProvider(fn), addTimelineLayer(layer), requestRedraw(), openDialog(spec), openModal(spec), getTime(), setTime(s), getSelectedId() }
+   *   addDragGuard(fn), addRangeProvider(fn), addTimelineLayer(layer), addTimelinePointer(handler), addRowHeightRequest(px), requestRedraw(), openDialog(spec), openModal(spec), getTime(), setTime(s), getSelectedId() }
    */
   constructor(env, services) {
     this._env = env;
@@ -238,6 +239,32 @@ export class PluginHost {
           return before;
         },
       }),
+      /**
+       * Gear / flaps / light state changes as one list per channel ({ gear: [{ timeS, value }], ... }), the edit rules that
+       * keep a channel free of no-op events (pure functions on one channel's list), and the write-back into a live track.
+       * Wrap `apply` / `restore` in ctx.exec for undo.
+       */
+      variables: Object.freeze({
+        channels: trackVariables.CHANNELS,
+        minGapS: trackVariables.MIN_GAP_S,
+        extract: (id) => { const t = s.getTracks().find((x) => x.id === id); return t ? trackVariables.extractChannels(t) : null; },
+        /** Rewrites the track's variable frames and `events` from `channels`; returns a snapshot for `restore`. */
+        apply: (id, channels) => {
+          const t = s.getTracks().find((x) => x.id === id);
+          if (!t) throw new Error(`No track "${id}".`);
+          return trackVariables.applyChannels(t, channels);
+        },
+        restore: (id, snapshot) => {
+          const t = s.getTracks().find((x) => x.id === id);
+          if (!t) throw new Error(`No track "${id}".`);
+          trackVariables.restoreSnapshot(t, snapshot);
+        },
+        rules: Object.freeze({
+          stateAt: trackVariables.stateAt, addEvent: trackVariables.addEvent, deleteEvent: trackVariables.deleteEvent,
+          moveEvent: trackVariables.moveEvent, moveLimits: trackVariables.moveLimits, setEventValue: trackVariables.setEventValue,
+          offeredValues: trackVariables.offeredValues, valuesEqual: trackVariables.valuesEqual,
+        }),
+      }),
       exec: (command) => s.exec(command),
       /** SVG text of an icon named in the manifest's `icons`, or '' if it could not be loaded. */
       icon: (name) => (entry.assets && entry.assets[name]) || '',
@@ -259,7 +286,29 @@ export class PluginHost {
       ui: Object.freeze({
         toast: (message) => s.toast(message),
         requestRedraw: () => s.requestRedraw(),
-        registerTimelineLayer: (layer) => own(s.addTimelineLayer({ draw: guard(layer.draw) })),
+        /** Track rows in the timeline start at `px` height until the returned function is called (the user's vertical zoom still scales it). */
+        requestRowHeight: (px) => own(s.addRowHeightRequest(px)),
+        /** layer.draw(g, {...}); optional layer.replacesEvents(track) -> true hides the built-in event triangles for that track. */
+        registerTimelineLayer: (layer) => own(s.addTimelineLayer({
+          draw: guard(layer.draw),
+          replacesEvents: layer.replacesEvents ? guard(layer.replacesEvents) : undefined,
+        })),
+        /**
+         * Claims pointer gestures (mouse, touch, pen) in the track rows. handler.pointerdown(info) returns a session
+         * { move(info), up(info), cancel() } to take the gesture, or nothing to leave it to the timeline.
+         * info: { track, x, y (row-local px), timeS (track time), secondsPerPixel, rowHeight, pointerType, shiftKey }.
+         */
+        registerTimelinePointer: (handler) => own(s.addTimelinePointer({
+          pointerdown: (info) => {
+            const session = guard(handler.pointerdown)(info);
+            if (!session) return null;
+            return {
+              move: guard((i) => (session.move ? session.move(i) : undefined)),
+              up: guard((i) => (session.up ? session.up(i) : undefined)),
+              cancel: guard(() => (session.cancel ? session.cancel() : undefined)),
+            };
+          },
+        })),
         /** Floating non-modal dialog with number fields and buttons; returns { setValues(values), close() }. */
         openDialog: (spec) => {
           const bar = s.openDialog({ ...spec, onChange: guard(spec.onChange || (() => {})), onButton: guard(spec.onButton || (() => {})) });

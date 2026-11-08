@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Event editor** (plugin `event-editor`): the track menu gets *Edit gear, flaps and light events*. Every signal has its own lane in the
+  track row (rows grow taller while the editor is open); markers are selected and dragged with mouse, touch or pen, and a responsive
+  panel lists the events and offers add at playhead, delete, nudge, time entry and undo. A channel never gets a no-op event: only
+  changes that differ from the state at that point can be added, markers stop at their same-lane neighbours, events that become
+  redundant are removed. The *Force on ground* checkbox sets the on-ground flag of the whole track (for hiking / car tracks as ground
+  targets); unchecked keeps the imported flags. **Done** applies everything as one undoable step. Press ? for help. English and German.
+- Timeline: vertical zoom (**↕+** / **↕−** buttons, Alt + wheel over the chart, or Shift + wheel over the track names) makes the track rows taller or shorter.
+- Host API (additive, still v1): `ctx.variables` (gear / flaps / light state changes per channel, edit rules, write-back),
+  `ctx.ui.registerTimelinePointer(handler)` (claim pointer gestures in track rows), `ctx.ui.requestRowHeight(px)`,
+  `registerTimelineLayer({ replacesEvents })`, shortcut option `first`. Plugin modals also close on a click on the backdrop.
+
 - **Edit aircraft** (plugin `edit-aircraft`): the track menu gets *Edit aircraft type, callsign, nickname, altitude* (pen icon). A
   responsive form with automatic light / dark theme, in English and German, changes the ICAO type, the callsign / tail number, the pilot
   nickname and shifts the track so it starts at a given altitude (ft or m), with a *Fetch ground altitude at position* button (terrain height

@@ -79,6 +79,9 @@ export function openPluginModal({ title = '', onClose, compact = false } = {}) {
   if (compact) { dialog.classList.add('compact'); maxBtn.hidden = true; }   // sized to the content (a form), no maximise button
   maxBtn.addEventListener('click', () => setMax(!dialog.classList.contains('max')));
   dialog.addEventListener('cancel', (e) => { e.preventDefault(); handle.close(); }); // Esc
+  // a press on the dimmed backdrop closes it too (the dialog itself is the target there; pointerdown, so that a text
+  // selection which ends outside the modal does not close it)
+  dialog.addEventListener('pointerdown', (e) => { if (e.target === dialog) handle.close(); });
   dialog.addEventListener('close', () => handle.close());
   // the page's global shortcuts (map zoom, play/pause, undo, ...) must not fire behind the modal; Esc is handled by the dialog
   dialog.addEventListener('keydown', (e) => { if (e.key !== 'Escape') e.stopPropagation(); });

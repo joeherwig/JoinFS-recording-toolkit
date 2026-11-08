@@ -220,7 +220,13 @@ class JfsMap extends HTMLElement {
       const range = this._store.visibleRange(track);
       const rangeKey = range ? `${range.startS}:${range.endS}` : '';
       entry.range = range;
-      if (entry.frameCount !== track.frames.times.length || entry.rangeKey !== rangeKey) {
+      // an edit that keeps the frame count (event editor: moved events, forced on-ground) still changes what is drawn:
+      // a rewrite of the events replaces the `events` array, and forcing the ground flag shows in ext.forceOnGround
+      const groundKey = track.ext && track.ext.forceOnGround ? 1 : 0;
+      if (entry.frameCount !== track.frames.times.length || entry.rangeKey !== rangeKey
+        || entry.eventsRef !== track.events || entry.groundKey !== groundKey) {
+        entry.eventsRef = track.events;
+        entry.groundKey = groundKey;
         entry.group.clearLayers();
         entry.runLayers = [];
         entry.icon = null; // clearLayers() removed the arrow and the markers; they are rebuilt below
