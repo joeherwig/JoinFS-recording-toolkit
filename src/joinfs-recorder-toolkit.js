@@ -100,6 +100,8 @@ async function startPlugins(store, toolbarEl) {
     addDragGuard: (fn) => store.addDragGuard(fn),
     addRangeProvider: (fn) => store.addRangeProvider(fn),
     addTimelineLayer: (layer) => store.addTimelineLayer(layer),
+    addTimelinePointer: (handler) => store.addTimelinePointer(handler),
+    addRowHeightRequest: (px) => store.addRowHeightRequest(px),
     requestRedraw: () => store.requestRedraw(),
     openDialog: (spec) => toolbarEl.openDialog(spec),
     openModal: (spec) => openPluginModal(spec),

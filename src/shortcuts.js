@@ -63,11 +63,12 @@ export class Shortcuts {
   /**
    * Registers a shortcut. `spec`: `{ id, key, primary?, alt?, shift?, allowInTyping?, preventDefault?, when?, run }`.
    * `allowInTyping` lets Ctrl/Cmd+S style chords work inside inputs (never inside an open modal).
+   * `first` puts the shortcut ahead of the ones registered earlier (a mode that takes over a key, e.g. Esc, while it lasts).
    * Returns an unregister function.
    */
   register(spec) {
     const entry = { preventDefault: true, ...spec };
-    this._specs.push(entry);
+    if (entry.first) this._specs.unshift(entry); else this._specs.push(entry);
     return () => { this._specs = this._specs.filter((s) => s !== entry); };
   }
 

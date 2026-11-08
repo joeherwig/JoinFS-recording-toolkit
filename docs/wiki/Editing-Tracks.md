@@ -91,7 +91,17 @@ position online and enters it, like the field elevation in the GPX import; only 
 one undoable step and is saved with the recording. The form follows the light / dark setting and the page language, and uses
 one column on phones.
 
-## Not editable (yet)
+## Gear, flaps, lights and on-ground
 
-Adding, deleting or moving single gear, flaps or light events is planned as a further plugin. See
-[Plugin Concept](Plugin-Concept#roadmap).
+Track menu > **Edit gear, flaps and light events** opens the event editor. Each signal (gear, flaps, nav, beacon, landing, taxi, strobe)
+has its own lane in the track row. The rows become taller while the editor is open; **↕+** / **↕−**, Alt + wheel over the chart, or Shift + wheel over the track names change the height.
+
+- **Select and move:** tap or click a marker, drag it along the time line. A marker stops at its neighbours in the same lane; it may
+  pass markers of other lanes. Tap empty space in the row to put the playhead there. The panel also has a list of all events, a
+  time field and nudge buttons (0.1 s, 1 s).
+- **Add:** put the playhead where the change happens and press the button in the panel. Only changes that differ from the state
+  at that point are offered (with gear down, only *Gear up here*). An event that becomes redundant is removed with a message.
+- **Delete:** the *Delete* button or the Del key; the previous state carries on.
+- **Force on ground:** the checkbox marks every position as on the ground (for hiking or car tracks used as ground targets).
+  Unchecked, the imported flags stay as they are. Altitude is not changed.
+- **Done** applies everything as one undoable step, **Cancel** (or Esc) discards. Press **?** for the key list.

@@ -42,7 +42,10 @@ ends.
 | click / drag | ruler | scrub the playhead |
 | wheel | timeline chart or ruler | zoom |
 | Ctrl + wheel | timeline chart | pan |
-| Shift + wheel | timeline | scroll rows vertically |
+| Shift + wheel | timeline chart | scroll rows vertically |
+| wheel | track names | scroll rows vertically |
+| Shift + wheel over the track names, Alt + wheel over the chart, **↕+** / **↕−** | timeline | vertical zoom (taller / shorter rows) |
+| **?** | event editor | key list; **Del**, **← →** (Shift: 1 s), **↑ ↓**, **Esc** work while it is open |
 | wheel, drag | map | zoom, pan |
 
 Touch screens use the same drags. Buttons and dialog controls are at least 44 px high.

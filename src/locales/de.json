@@ -24,6 +24,8 @@
   "timeline.playPause": "Wiedergabe/Pause (Leertaste)",
   "timeline.zoomOut": "Verkleinern",
   "timeline.zoomIn": "Vergrößern",
+  "timeline.rowsShorter": "Niedrigere Zeilen (vertikal zoomen)",
+  "timeline.rowsTaller": "Höhere Zeilen (vertikal zoomen)",
   "timeline.zoomHint": "Mausrad: zoomen · Strg+Mausrad: verschieben · Umschalt+Mausrad: Zeilen scrollen",
   "timeline.eventsTitle": "Marker für Fahrwerk, Klappen und Lichter",
   "modal.gpxTitle": "GPX in JoinFS-Aufzeichnung umwandeln",

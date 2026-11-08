@@ -23,6 +23,8 @@ export class Store extends EventTarget {
     this.rangeProviders = new Set();
     this.dragGuards = new Set();
     this.timelineLayers = new Set();
+    this.timelinePointers = new Set();
+    this.rowHeightRequests = new Set(); // minimum track row heights (px) plugins ask for while a mode is active
     this.history = new History({
       onChange: () => {
         this._emit('history-changed', { canUndo: this.history.canUndo, canRedo: this.history.canRedo });
@@ -83,6 +85,22 @@ export class Store extends EventTarget {
     this.timelineLayers.add(layer);
     this.requestRedraw();
     return () => { this.timelineLayers.delete(layer); this.requestRedraw(); };
+  }
+
+  /**
+   * A plugin's claim on pointer gestures in the timeline's track rows: `handler.pointerdown(info)` returns a session
+   * `{ move(info), up(info), cancel() }` to take the gesture, or a falsy value to let the timeline's own drag run.
+   */
+  addTimelinePointer(handler) {
+    this.timelinePointers.add(handler);
+    return () => this.timelinePointers.delete(handler);
+  }
+
+  /** A plugin's mode wants track rows `px` tall to start with (the user can still zoom); returns the release function. */
+  addRowHeightRequest(px) {
+    this.rowHeightRequests.add(px);
+    this.requestRedraw();
+    return () => { this.rowHeightRequests.delete(px); this.requestRedraw(); };
   }
 
   /** Asks the views to redraw (a plugin's draft changed). */

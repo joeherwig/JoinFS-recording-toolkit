@@ -14,6 +14,8 @@ export async function loadPlugin(id, { tracks = [], locale = 'en', storage = {} 
   const toasts = [];
   const guards = new Set();
   const layers = new Set();
+  const pointers = new Set();
+  const rowRequests = new Set();
   const ranges = new Set();
   const dialogs = [];
   const modals = [];
@@ -41,6 +43,8 @@ export async function loadPlugin(id, { tracks = [], locale = 'en', storage = {} 
     addDragGuard: (fn) => { guards.add(fn); return () => guards.delete(fn); },
     addRangeProvider: (fn) => { ranges.add(fn); return () => ranges.delete(fn); },
     addTimelineLayer: (layer) => { layers.add(layer); return () => layers.delete(layer); },
+    addRowHeightRequest: (px) => { rowRequests.add(px); return () => rowRequests.delete(px); },
+    addTimelinePointer: (handler) => { pointers.add(handler); return () => pointers.delete(handler); },
     requestRedraw: () => { redraws.count++; },
     openDialog: (spec) => {
       const bar = { spec, closed: false, values: {}, setValues(v) { Object.assign(this.values, v); }, close() { this.closed = true; } };
@@ -60,7 +64,7 @@ export async function loadPlugin(id, { tracks = [], locale = 'en', storage = {} 
   const host = new PluginHost(env, services);
   await host.loadAll([id]);
   return {
-    host, history, redraws, formats, warnings, toasts, guards, layers, ranges, dialogs, modals, state, messages, tracks,
+    host, history, redraws, formats, warnings, toasts, guards, layers, pointers, rowRequests, ranges, dialogs, modals, state, messages, tracks,
     rangeOf: (track) => { for (const r of ranges) { const v = r(track); if (v) return v; } return null; },
     canDrag: (track) => [...guards].every((g) => g(track) !== false),
     lastDialog: () => dialogs[dialogs.length - 1],

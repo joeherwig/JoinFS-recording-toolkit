@@ -103,7 +103,10 @@ ctx.tracks.patch(id, { callsign, nickname, icaoType })  writes those text fields
 ctx.tracks.clip(track, startS, endS)           a copy cut to the range, variable state seeded at the start; null if empty
 
 ctx.ui.registerTrackAction({ id, label, run({ trackId }) })
-ctx.ui.registerTimelineLayer({ draw(g, { track, top, height, width, toX }) })
+ctx.ui.registerTimelineLayer({ draw(g, { track, top, height, width, toX }), replacesEvents(track) })   // true hides the built-in event triangles
+ctx.ui.registerTimelinePointer({ pointerdown(info) { return { move(info) {}, up(info) {}, cancel() {} }; } })   // claim gestures in track rows; info: { track, x, y, timeS, secondsPerPixel, rowHeight, pointerType }
+ctx.ui.requestRowHeight(px)   // track rows at least px tall until the returned function is called
+ctx.variables   // extract(id), apply(id, channels), restore(id, snapshot), rules.*: gear/flaps/light state changes and the no-op-free edit rules
 ctx.ui.openDialog(spec)                        floating non-modal dialog; returns { setValues(v), close() }
 ctx.ui.openModal({ title, onClose, compact })  large modal (compact: sized to its content, for forms) with an empty body for your own element; returns { body, close() }
 ctx.ui.requestRedraw()                         ask the views to redraw after a change in your own draft state
